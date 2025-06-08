@@ -9,30 +9,28 @@ import Fans from './pages/fans'
 import Login from './pages/login'
 import Register from './pages/register'
 import Admin from './pages/admin'
+import { AuthProvider } from './context/AuthContext'
 
 function App() {
- 
-
   return (
-    <>
-     <div>
-      <Router>
-        <Nav />
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/players" element={<Players />} />
-          <Route path="/fixtures" element={<Fixtures />} />
-          <Route path="/news" element={<News />} />
-          <Route path="/store" element={<Store />} />
-          <Route path="/fans" element={<Fans />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/admin" element={<Admin />} />
-        </Routes>
-      </Router>
-       
-     </div>
-    </>
+    <AuthProvider>
+      <div>
+        <Router>
+          <Nav />
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/players" element={<Players />} />
+            <Route path="/fixtures" element={<Fixtures />} />
+            <Route path="/news" element={<News />} />
+            <Route path="/store" element={<Store />} />
+            <Route path="/fans" element={<Fans />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/admin" element={<Admin />} />
+          </Routes>
+        </Router>
+      </div>
+    </AuthProvider>
   )
 }
 

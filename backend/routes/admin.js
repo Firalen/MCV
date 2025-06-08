@@ -1,0 +1,239 @@
+const express = require('express');
+const router = express.Router();
+const auth = require('../middleware/auth');
+const admin = require('../middleware/admin');
+const Player = require('../models/Player');
+const Fixture = require('../models/Fixture');
+const StoreItem = require('../models/StoreItem');
+const News = require('../models/News');
+const User = require('../models/User');
+
+// Players routes
+router.get('/players', auth, admin, async (req, res) => {
+  try {
+    const players = await Player.find().sort({ number: 1 });
+    res.json(players);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.post('/players', auth, admin, async (req, res) => {
+  const player = new Player({
+    name: req.body.name,
+    position: req.body.position,
+    number: req.body.number,
+    status: req.body.status,
+    stats: {
+      kills: 0,
+      aces: 0,
+      digs: 0,
+      blocks: 0
+    }
+  });
+
+  try {
+    const newPlayer = await player.save();
+    res.status(201).json(newPlayer);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
+router.put('/players/:id', auth, admin, async (req, res) => {
+  try {
+    const player = await Player.findById(req.params.id);
+    if (!player) return res.status(404).json({ message: 'Player not found' });
+
+    Object.assign(player, req.body);
+    const updatedPlayer = await player.save();
+    res.json(updatedPlayer);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
+router.delete('/players/:id', auth, admin, async (req, res) => {
+  try {
+    const player = await Player.findById(req.params.id);
+    if (!player) return res.status(404).json({ message: 'Player not found' });
+
+    await Player.deleteOne({ _id: req.params.id });
+    res.json({ message: 'Player deleted' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Fixtures routes
+router.get('/fixtures', auth, admin, async (req, res) => {
+  try {
+    const fixtures = await Fixture.find().sort({ date: 1 });
+    res.json(fixtures);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.post('/fixtures', auth, admin, async (req, res) => {
+  const fixture = new Fixture({
+    opponent: req.body.opponent,
+    date: req.body.date,
+    venue: req.body.venue,
+    status: req.body.status,
+    score: req.body.score
+  });
+
+  try {
+    const newFixture = await fixture.save();
+    res.status(201).json(newFixture);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
+router.put('/fixtures/:id', auth, admin, async (req, res) => {
+  try {
+    const fixture = await Fixture.findById(req.params.id);
+    if (!fixture) return res.status(404).json({ message: 'Fixture not found' });
+
+    Object.assign(fixture, req.body);
+    const updatedFixture = await fixture.save();
+    res.json(updatedFixture);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
+router.delete('/fixtures/:id', auth, admin, async (req, res) => {
+  try {
+    const fixture = await Fixture.findById(req.params.id);
+    if (!fixture) return res.status(404).json({ message: 'Fixture not found' });
+
+    await Fixture.deleteOne({ _id: req.params.id });
+    res.json({ message: 'Fixture deleted' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Store routes
+router.get('/store', auth, admin, async (req, res) => {
+  try {
+    const items = await StoreItem.find().sort({ name: 1 });
+    res.json(items);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.post('/store', auth, admin, async (req, res) => {
+  const item = new StoreItem({
+    name: req.body.name,
+    price: req.body.price,
+    stock: req.body.stock,
+    status: req.body.status,
+    description: req.body.description,
+    image: req.body.image,
+    category: req.body.category,
+    sizes: req.body.sizes
+  });
+
+  try {
+    const newItem = await item.save();
+    res.status(201).json(newItem);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
+router.put('/store/:id', auth, admin, async (req, res) => {
+  try {
+    const item = await StoreItem.findById(req.params.id);
+    if (!item) return res.status(404).json({ message: 'Item not found' });
+
+    Object.assign(item, req.body);
+    const updatedItem = await item.save();
+    res.json(updatedItem);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
+router.delete('/store/:id', auth, admin, async (req, res) => {
+  try {
+    const item = await StoreItem.findById(req.params.id);
+    if (!item) return res.status(404).json({ message: 'Item not found' });
+
+    await StoreItem.deleteOne({ _id: req.params.id });
+    res.json({ message: 'Item deleted' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// News routes
+router.get('/news', auth, admin, async (req, res) => {
+  try {
+    const news = await News.find().sort({ date: -1 });
+    res.json(news);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.post('/news', auth, admin, async (req, res) => {
+  const news = new News({
+    title: req.body.title,
+    content: req.body.content,
+    date: new Date(),
+    image: req.body.image,
+    author: req.user.id,
+    category: req.body.category,
+    tags: req.body.tags
+  });
+
+  try {
+    const newNews = await news.save();
+    res.status(201).json(newNews);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
+router.put('/news/:id', auth, admin, async (req, res) => {
+  try {
+    const news = await News.findById(req.params.id);
+    if (!news) return res.status(404).json({ message: 'News not found' });
+
+    Object.assign(news, req.body);
+    const updatedNews = await news.save();
+    res.json(updatedNews);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
+router.delete('/news/:id', auth, admin, async (req, res) => {
+  try {
+    const news = await News.findById(req.params.id);
+    if (!news) return res.status(404).json({ message: 'News not found' });
+
+    await News.deleteOne({ _id: req.params.id });
+    res.json({ message: 'News deleted' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Add users route for admin dashboard
+router.get('/users', auth, admin, async (req, res) => {
+  try {
+    const users = await User.find().select('-password');
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+module.exports = router; 
