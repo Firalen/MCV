@@ -785,6 +785,18 @@ app.post('/register-admin', async (req, res) => {
   }
 });
 
+// Check Admin Accounts Route (for debugging)
+app.get('/check-admin-accounts', async (req, res) => {
+  try {
+    const adminUsers = await User.find({ role: 'admin' }).select('-password');
+    console.log('Found admin users:', adminUsers);
+    res.json({ adminUsers });
+  } catch (error) {
+    console.error('Error checking admin accounts:', error);
+    res.status(500).json({ message: 'Error checking admin accounts' });
+  }
+});
+
 // Admin Login Route
 app.post('/admin/login', async (req, res) => {
   console.log('\n=== Admin Login Request ===');
@@ -819,7 +831,8 @@ app.post('/admin/login', async (req, res) => {
     console.log('User found:', {
       id: user._id,
       email: user.email,
-      role: user.role
+      role: user.role,
+      hasPassword: !!user.password
     });
 
     // Check if user is admin
@@ -831,6 +844,8 @@ app.post('/admin/login', async (req, res) => {
     // Check password
     console.log('Verifying password...');
     const validPassword = await bcrypt.compare(password, user.password);
+    console.log('Password verification result:', validPassword);
+    
     if (!validPassword) {
       console.log('Invalid password for admin:', email);
       return res.status(400).json({ message: 'Invalid email or password' });
