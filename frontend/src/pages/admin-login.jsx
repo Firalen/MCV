@@ -22,6 +22,10 @@ const AdminLogin = () => {
       const response = await axios.post('http://localhost:3000/admin/login', {
         email,
         password
+      }, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
       });
 
       console.log('Admin login response:', response.data);
@@ -42,7 +46,33 @@ const AdminLogin = () => {
       navigate('/admin', { replace: true });
     } catch (err) {
       console.error('Admin login error:', err);
-      setError(err.response?.data?.message || 'Failed to login. Please try again.');
+      
+      // Handle different types of errors
+      if (err.response) {
+        // The request was made and the server responded with a status code
+        // that falls out of the range of 2xx
+        const errorMessage = err.response.data.message || 'Failed to login. Please try again.';
+        const errorDetails = err.response.data.details;
+        
+        if (typeof errorDetails === 'object') {
+          // Handle validation errors
+          const validationErrors = Object.entries(errorDetails)
+            .filter(([_, value]) => value !== null)
+            .map(([field, message]) => `${field}: ${message}`)
+            .join('\n');
+          setError(validationErrors || errorMessage);
+        } else {
+          setError(errorDetails || errorMessage);
+        }
+      } else if (err.request) {
+        // The request was made but no response was received
+        console.error('No response received:', err.request);
+        setError('No response from server. Please check if the server is running.');
+      } else {
+        // Something happened in setting up the request that triggered an Error
+        console.error('Request setup error:', err.message);
+        setError(`Error setting up the request: ${err.message}`);
+      }
     } finally {
       setLoading(false);
     }

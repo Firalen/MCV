@@ -790,16 +790,37 @@ app.post('/admin/login', async (req, res) => {
   console.log('\n=== Admin Login Request ===');
   console.log('Time:', new Date().toISOString());
   console.log('Request body:', { ...req.body, password: '***' });
+  console.log('Headers:', req.headers);
+  console.log('MongoDB Connection State:', mongoose.connection.readyState);
   
   try {
     const { email, password } = req.body;
 
+    if (!email || !password) {
+      console.log('Missing credentials:', { email: !!email, password: !!password });
+      return res.status(400).json({ 
+        message: 'Email and password are required',
+        details: {
+          email: !email ? 'Email is required' : null,
+          password: !password ? 'Password is required' : null
+        }
+      });
+    }
+
     // Find user
+    console.log('Looking for user with email:', email);
     const user = await User.findOne({ email });
+    
     if (!user) {
       console.log('User not found:', email);
       return res.status(400).json({ message: 'Invalid email or password' });
     }
+
+    console.log('User found:', {
+      id: user._id,
+      email: user.email,
+      role: user.role
+    });
 
     // Check if user is admin
     if (user.role !== 'admin') {
@@ -808,6 +829,7 @@ app.post('/admin/login', async (req, res) => {
     }
 
     // Check password
+    console.log('Verifying password...');
     const validPassword = await bcrypt.compare(password, user.password);
     if (!validPassword) {
       console.log('Invalid password for admin:', email);
@@ -815,10 +837,12 @@ app.post('/admin/login', async (req, res) => {
     }
 
     // Update last login
+    console.log('Updating last login...');
     user.lastLogin = new Date();
     await user.save();
 
     // Generate token
+    console.log('Generating JWT token...');
     const token = jwt.sign(
       { userId: user._id, role: user.role },
       process.env.JWT_SECRET,
@@ -837,8 +861,17 @@ app.post('/admin/login', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Admin login error:', error);
-    res.status(500).json({ message: 'Error during admin login' });
+    console.error('\n❌ Admin login error:');
+    console.error('Error name:', error.name);
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
+    console.error('MongoDB Connection State:', mongoose.connection.readyState);
+    
+    res.status(500).json({ 
+      message: 'Error during admin login',
+      error: error.message,
+      details: error.stack
+    });
   }
 });
 
