@@ -9,8 +9,10 @@ import AdminLogin from './pages/admin-login';
 import RegisterAdmin from './pages/register-admin';
 import AdminDashboard from './pages/admin-dashboard';
 import Profile from './pages/profile';
+import Players from './pages/players';
 import Fixtures from './pages/fixtures';
 import News from './pages/news';
+import Fans from './pages/fans';
 import { useAuth } from './context/AuthContext';
 
 // Protected Route Component
@@ -54,6 +56,22 @@ const App = () => {
                 element={
                   <ProtectedRoute>
                     <Profile />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/players"
+                element={
+                  <ProtectedRoute>
+                    <Players />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/fans"
+                element={
+                  <ProtectedRoute>
+                    <Fans />
                   </ProtectedRoute>
                 }
               />
