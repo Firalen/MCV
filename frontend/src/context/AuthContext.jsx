@@ -1,5 +1,5 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
-import axiosInstance from '../utils/axios';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import axios from 'axios';
 
 const AuthContext = createContext(null);
 
@@ -14,63 +14,50 @@ export const AuthProvider = ({ children }) => {
     
     if (token && storedUser) {
       try {
-        const parsedUser = JSON.parse(storedUser);
-        setUser(parsedUser);
-        console.log('Restored user from localStorage:', parsedUser);
+        const userData = JSON.parse(storedUser);
+        setUser(userData);
       } catch (error) {
-        console.error('Error parsing stored user:', error);
+        console.error('Error parsing stored user data:', error);
+        localStorage.removeItem('token');
         localStorage.removeItem('user');
       }
     }
     setLoading(false);
   }, []);
 
-  const fetchUserProfile = async () => {
-    try {
-      const { data } = await axiosInstance.get('/profile');
-      setUser(data.profile);
-      localStorage.setItem('user', JSON.stringify(data.profile));
-    } catch (error) {
-      console.error('Error fetching user profile:', error);
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      setUser(null);
-    }
-    setLoading(false);
-  };
-
   const login = async (email, password) => {
     try {
-      const { data } = await axiosInstance.post('/login', { email, password });
-      console.log('Login response:', data);
-      
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
-      setUser(data.user);
-      
-      return { success: true, user: data.user };
+      const response = await axios.post('http://localhost:3000/login', {
+        email,
+        password
+      });
+
+      const { token, user: userData } = response.data;
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(userData));
+      setUser(userData);
+      return userData;
     } catch (error) {
       console.error('Login error:', error);
-      return { 
-        success: false, 
-        error: error.response?.data?.message || 'Login failed. Please try again.' 
-      };
+      throw error;
     }
   };
 
-  const register = async (name, email, password) => {
+  const adminLogin = async (email, password) => {
     try {
-      const { data } = await axiosInstance.post('/register', { name, email, password });
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
-      setUser(data.user);
-      return { success: true, user: data.user };
+      const response = await axios.post('http://localhost:3000/admin/login', {
+        email,
+        password
+      });
+
+      const { token, user: userData } = response.data;
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(userData));
+      setUser(userData);
+      return userData;
     } catch (error) {
-      console.error('Registration error:', error);
-      return { 
-        success: false, 
-        error: error.response?.data?.message || 'Registration failed. Please try again.' 
-      };
+      console.error('Admin login error:', error);
+      throw error;
     }
   };
 
@@ -84,16 +71,18 @@ export const AuthProvider = ({ children }) => {
     return user && user.role === 'admin';
   };
 
+  const value = {
+    user,
+    loading,
+    login,
+    adminLogin,
+    logout,
+    isAdmin
+  };
+
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      login, 
-      register, 
-      logout, 
-      loading,
-      isAdmin 
-    }}>
-      {children}
+    <AuthContext.Provider value={value}>
+      {!loading && children}
     </AuthContext.Provider>
   );
 };
