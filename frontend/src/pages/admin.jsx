@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react'
-import axiosInstance from '../utils/axios'
+import axios from 'axios'
 import { useAuth } from '../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
 
 const Admin = () => {
-  const [activeTab, setActiveTab] = useState('overview')
+  const [activeTab, setActiveTab] = useState('players')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [stats, setStats] = useState({
@@ -19,6 +19,31 @@ const Admin = () => {
   const [news, setNews] = useState([])
   const { user } = useAuth()
   const navigate = useNavigate()
+
+  // Form states
+  const [newPlayer, setNewPlayer] = useState({
+    name: '',
+    position: '',
+    number: '',
+    age: '',
+    nationality: '',
+    image: ''
+  })
+
+  const [newFixture, setNewFixture] = useState({
+    opponent: '',
+    date: '',
+    time: '',
+    venue: '',
+    competition: ''
+  })
+
+  const [newNews, setNewNews] = useState({
+    title: '',
+    content: '',
+    image: '',
+    category: ''
+  })
 
   const tabs = [
     { id: 'overview', name: 'Overview' },
@@ -43,30 +68,47 @@ const Admin = () => {
       setLoading(true)
       setError(null)
 
+      const token = localStorage.getItem('token')
       switch (activeTab) {
         case 'players':
-          const playersData = await axiosInstance.get('/api/admin/players')
-          setPlayers(playersData.data)
+          const playersRes = await axios.get('http://localhost:3000/players', {
+            headers: { Authorization: `Bearer ${token}` }
+          })
+          setPlayers(playersRes.data)
           break
         case 'fixtures':
-          const fixturesData = await axiosInstance.get('/api/admin/fixtures')
-          setFixtures(fixturesData.data)
+          const fixturesRes = await axios.get('http://localhost:3000/fixtures', {
+            headers: { Authorization: `Bearer ${token}` }
+          })
+          setFixtures(fixturesRes.data)
           break
         case 'store':
-          const storeData = await axiosInstance.get('/api/admin/store')
-          setStoreItems(storeData.data)
+          const storeRes = await axios.get('http://localhost:3000/store', {
+            headers: { Authorization: `Bearer ${token}` }
+          })
+          setStoreItems(storeRes.data)
           break
         case 'news':
-          const newsData = await axiosInstance.get('/api/admin/news')
-          setNews(newsData.data)
+          const newsRes = await axios.get('http://localhost:3000/news', {
+            headers: { Authorization: `Bearer ${token}` }
+          })
+          setNews(newsRes.data)
           break
         default:
           // Fetch overview stats
           const [overviewUsers, overviewPlayers, overviewFixtures, overviewStore] = await Promise.all([
-            axiosInstance.get('/api/admin/users'),
-            axiosInstance.get('/api/admin/players'),
-            axiosInstance.get('/api/admin/fixtures'),
-            axiosInstance.get('/api/admin/store')
+            axios.get('http://localhost:3000/users', {
+              headers: { Authorization: `Bearer ${token}` }
+            }),
+            axios.get('http://localhost:3000/players', {
+              headers: { Authorization: `Bearer ${token}` }
+            }),
+            axios.get('http://localhost:3000/fixtures', {
+              headers: { Authorization: `Bearer ${token}` }
+            }),
+            axios.get('http://localhost:3000/store', {
+              headers: { Authorization: `Bearer ${token}` }
+            })
           ])
           
           setStats({
@@ -89,18 +131,30 @@ const Admin = () => {
     }
   }
 
-  const handleAddPlayer = async (playerData) => {
+  const handleAddPlayer = async (e) => {
+    e.preventDefault()
     try {
-      const response = await axiosInstance.post('/api/admin/players', playerData)
-      setPlayers([...players, response.data])
-    } catch (error) {
-      setError(error.response?.data?.message || 'Failed to add player')
+      const token = localStorage.getItem('token')
+      await axios.post('http://localhost:3000/players', newPlayer, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      setNewPlayer({
+        name: '',
+        position: '',
+        number: '',
+        age: '',
+        nationality: '',
+        image: ''
+      })
+      fetchData()
+    } catch (err) {
+      setError('Error adding player')
     }
   }
 
   const handleUpdatePlayer = async (id, playerData) => {
     try {
-      const response = await axiosInstance.put(`/api/admin/players/${id}`, playerData)
+      const response = await axios.put(`http://localhost:3000/players/${id}`, playerData)
       setPlayers(players.map(player => player._id === id ? response.data : player))
     } catch (error) {
       setError(error.response?.data?.message || 'Failed to update player')
@@ -109,25 +163,36 @@ const Admin = () => {
 
   const handleDeletePlayer = async (id) => {
     try {
-      await axiosInstance.delete(`/api/admin/players/${id}`)
+      await axios.delete(`http://localhost:3000/players/${id}`)
       setPlayers(players.filter(player => player._id !== id))
     } catch (error) {
       setError(error.response?.data?.message || 'Failed to delete player')
     }
   }
 
-  const handleAddFixture = async (fixtureData) => {
+  const handleAddFixture = async (e) => {
+    e.preventDefault()
     try {
-      const response = await axiosInstance.post('/api/admin/fixtures', fixtureData)
-      setFixtures([...fixtures, response.data])
-    } catch (error) {
-      setError(error.response?.data?.message || 'Failed to add fixture')
+      const token = localStorage.getItem('token')
+      await axios.post('http://localhost:3000/fixtures', newFixture, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      setNewFixture({
+        opponent: '',
+        date: '',
+        time: '',
+        venue: '',
+        competition: ''
+      })
+      fetchData()
+    } catch (err) {
+      setError('Error adding fixture')
     }
   }
 
   const handleUpdateFixture = async (id, fixtureData) => {
     try {
-      const response = await axiosInstance.put(`/api/admin/fixtures/${id}`, fixtureData)
+      const response = await axios.put(`http://localhost:3000/fixtures/${id}`, fixtureData)
       setFixtures(fixtures.map(fixture => fixture._id === id ? response.data : fixture))
     } catch (error) {
       setError(error.response?.data?.message || 'Failed to update fixture')
@@ -136,7 +201,7 @@ const Admin = () => {
 
   const handleDeleteFixture = async (id) => {
     try {
-      await axiosInstance.delete(`/api/admin/fixtures/${id}`)
+      await axios.delete(`http://localhost:3000/fixtures/${id}`)
       setFixtures(fixtures.filter(fixture => fixture._id !== id))
     } catch (error) {
       setError(error.response?.data?.message || 'Failed to delete fixture')
@@ -145,7 +210,7 @@ const Admin = () => {
 
   const handleAddStoreItem = async (itemData) => {
     try {
-      const response = await axiosInstance.post('/api/admin/store', itemData)
+      const response = await axios.post('http://localhost:3000/store', itemData)
       setStoreItems([...storeItems, response.data])
     } catch (error) {
       setError(error.response?.data?.message || 'Failed to add store item')
@@ -154,7 +219,7 @@ const Admin = () => {
 
   const handleUpdateStoreItem = async (id, itemData) => {
     try {
-      const response = await axiosInstance.put(`/api/admin/store/${id}`, itemData)
+      const response = await axios.put(`http://localhost:3000/store/${id}`, itemData)
       setStoreItems(storeItems.map(item => item._id === id ? response.data : item))
     } catch (error) {
       setError(error.response?.data?.message || 'Failed to update store item')
@@ -163,25 +228,35 @@ const Admin = () => {
 
   const handleDeleteStoreItem = async (id) => {
     try {
-      await axiosInstance.delete(`/api/admin/store/${id}`)
+      await axios.delete(`http://localhost:3000/store/${id}`)
       setStoreItems(storeItems.filter(item => item._id !== id))
     } catch (error) {
       setError(error.response?.data?.message || 'Failed to delete store item')
     }
   }
 
-  const handleAddNews = async (newsData) => {
+  const handleAddNews = async (e) => {
+    e.preventDefault()
     try {
-      const response = await axiosInstance.post('/api/admin/news', newsData)
-      setNews([...news, response.data])
-    } catch (error) {
-      setError(error.response?.data?.message || 'Failed to add news')
+      const token = localStorage.getItem('token')
+      await axios.post('http://localhost:3000/news', newNews, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      setNewNews({
+        title: '',
+        content: '',
+        image: '',
+        category: ''
+      })
+      fetchData()
+    } catch (err) {
+      setError('Error adding news')
     }
   }
 
   const handleUpdateNews = async (id, newsData) => {
     try {
-      const response = await axiosInstance.put(`/api/admin/news/${id}`, newsData)
+      const response = await axios.put(`http://localhost:3000/news/${id}`, newsData)
       setNews(news.map(item => item._id === id ? response.data : item))
     } catch (error) {
       setError(error.response?.data?.message || 'Failed to update news')
@@ -190,7 +265,7 @@ const Admin = () => {
 
   const handleDeleteNews = async (id) => {
     try {
-      await axiosInstance.delete(`/api/admin/news/${id}`)
+      await axios.delete(`http://localhost:3000/news/${id}`)
       setNews(news.filter(item => item._id !== id))
     } catch (error) {
       setError(error.response?.data?.message || 'Failed to delete news')

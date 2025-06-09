@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import mug2Logo from '../assets/mug2.webp';
+import axios from 'axios';
 
 const Register = () => {
   const [name, setName] = useState('');
@@ -18,20 +19,29 @@ const Register = () => {
     setError('');
 
     if (password !== confirmPassword) {
-      return setError('Passwords do not match');
+      setError('Passwords do not match');
+      return;
     }
 
     setLoading(true);
 
     try {
-      const result = await register(name, email, password);
-      if (result.success) {
-        navigate('/');
-      } else {
-        setError(result.error);
-      }
+      const response = await axios.post('http://localhost:3000/register', {
+        name,
+        email,
+        password
+      });
+
+      // Store token in localStorage
+      localStorage.setItem('token', response.data.token);
+      
+      // Call the register function from AuthContext
+      await register(name, email, password);
+      
+      // Navigate to home page after successful registration
+      navigate('/');
     } catch (err) {
-      setError('Failed to create an account. Please try again.');
+      setError(err.response?.data?.message || 'Failed to register. Please try again.');
     }
 
     setLoading(false);
@@ -47,7 +57,7 @@ const Register = () => {
             className="h-20 w-auto mx-auto mb-4"
           />
           <h2 className="text-3xl font-bold text-white">Create Account</h2>
-          <p className="text-blue-100 mt-2">Join Mugher City FC today</p>
+          <p className="text-blue-100 mt-2">Join our community today</p>
         </div>
         
         <div className="p-8">
@@ -117,21 +127,6 @@ const Register = () => {
                 className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
                 placeholder="Confirm your password"
               />
-            </div>
-
-            <div className="flex items-center">
-              <input
-                id="terms"
-                type="checkbox"
-                required
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              />
-              <label htmlFor="terms" className="ml-2 block text-sm text-gray-700">
-                I agree to the{' '}
-                <a href="#" className="text-blue-600 hover:text-blue-500">
-                  Terms and Conditions
-                </a>
-              </label>
             </div>
 
             <button

@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import mug2Logo from '../assets/mug2.webp';
 import axios from 'axios';
 
-const Login = () => {
+const AdminLogin = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -18,35 +18,30 @@ const Login = () => {
     setLoading(true);
 
     try {
-      console.log('Attempting login...');
-      const response = await axios.post('http://localhost:3000/login', {
+      console.log('Attempting admin login...');
+      const response = await axios.post('http://localhost:3000/admin/login', {
         email,
         password
       });
 
-      console.log('Login response:', response.data);
+      console.log('Admin login response:', response.data);
 
       // Store token in localStorage
       localStorage.setItem('token', response.data.token);
       
       // Store user info including role
       const userData = response.data.user;
-      console.log('User data:', userData);
+      console.log('Admin user data:', userData);
       localStorage.setItem('user', JSON.stringify(userData));
       
       // Call the login function from AuthContext
       await login(email, password);
       
-      // Check user role and redirect accordingly
-      if (userData && userData.role === 'admin') {
-        console.log('User is admin, redirecting to admin dashboard...');
-        navigate('/admin', { replace: true });
-      } else {
-        console.log('User is regular user, redirecting to home...');
-        navigate('/', { replace: true });
-      }
+      // Redirect to admin dashboard
+      console.log('Admin login successful, redirecting to admin dashboard...');
+      navigate('/admin', { replace: true });
     } catch (err) {
-      console.error('Login error:', err);
+      console.error('Admin login error:', err);
       setError(err.response?.data?.message || 'Failed to login. Please try again.');
     } finally {
       setLoading(false);
@@ -62,8 +57,8 @@ const Login = () => {
             alt="Mugher Logo" 
             className="h-20 w-auto mx-auto mb-4"
           />
-          <h2 className="text-3xl font-bold text-white">Welcome Back</h2>
-          <p className="text-blue-100 mt-2">Sign in to your account</p>
+          <h2 className="text-3xl font-bold text-white">Admin Login</h2>
+          <p className="text-blue-100 mt-2">Sign in to admin dashboard</p>
         </div>
         
         <div className="p-8">
@@ -86,7 +81,7 @@ const Login = () => {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                placeholder="Enter your email"
+                placeholder="Enter your admin email"
               />
             </div>
 
@@ -105,22 +100,6 @@ const Login = () => {
               />
             </div>
 
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <input
-                  id="remember-me"
-                  type="checkbox"
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700">
-                  Remember me
-                </label>
-              </div>
-              <a href="#" className="text-sm font-medium text-blue-600 hover:text-blue-500">
-                Forgot password?
-              </a>
-            </div>
-
             <button
               type="submit"
               disabled={loading}
@@ -135,16 +114,16 @@ const Login = () => {
                   Signing in...
                 </span>
               ) : (
-                'Sign in'
+                'Sign in as Admin'
               )}
             </button>
           </form>
 
           <div className="mt-8 text-center">
             <p className="text-sm text-gray-600">
-              Don't have an account?{' '}
-              <Link to="/register" className="font-medium text-blue-600 hover:text-blue-500 transition-colors duration-200">
-                Create an account
+              Not an admin?{' '}
+              <Link to="/login" className="font-medium text-blue-600 hover:text-blue-500 transition-colors duration-200">
+                Go to user login
               </Link>
             </p>
             <p className="text-sm text-gray-600 mt-2">
@@ -160,4 +139,4 @@ const Login = () => {
   );
 };
 
-export default Login;
+export default AdminLogin; 
