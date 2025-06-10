@@ -12,7 +12,7 @@ const Register = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const { register } = useAuth();
+  const { setUser, register } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -32,11 +32,12 @@ const Register = () => {
         password
       });
 
-      // Store token in localStorage
+      // Store token and user data in localStorage
       localStorage.setItem('token', response.data.token);
+      localStorage.setItem('user', JSON.stringify(response.data.user));
       
-      // Call the register function from AuthContext
-      await register(name, email, password);
+      // Update the user state in AuthContext
+      await register(response.data.user);
       
       // Navigate to home page after successful registration
       navigate('/');

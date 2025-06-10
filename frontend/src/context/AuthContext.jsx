@@ -43,6 +43,10 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const register = async (userData) => {
+    setUser(userData);
+  };
+
   const adminLogin = async (email, password) => {
     try {
       const response = await axios.post('http://localhost:3000/admin/login', {
@@ -75,6 +79,7 @@ export const AuthProvider = ({ children }) => {
     user,
     loading,
     login,
+    register,
     adminLogin,
     logout,
     isAdmin
