@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import logo from '../assets/mug2.webp';
 
 const Nav = () => {
   const { user, logout } = useAuth();
@@ -17,7 +18,7 @@ const Nav = () => {
           <div className="flex items-center">
             <Link to="/" className="flex items-center">
               <img
-                src="../assets/mug2.webp"
+                src={logo}
                 alt="Mugher Cement Logo"
                 className="h-12 w-auto"
               />
