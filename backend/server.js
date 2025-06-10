@@ -135,11 +135,21 @@ const User = mongoose.model("User", userSchema);
 // Player schema & model
 const playerSchema = new mongoose.Schema({
     name: { type: String, required: true },
-    position: { type: String, required: true },
+    position: { 
+        type: String, 
+        required: true,
+        enum: ['Outside Hitter', 'Middle Blocker', 'Opposite Hitter', 'Setter', 'Libero', 'Defensive Specialist']
+    },
     number: { type: Number, required: true },
     age: { type: Number, required: true },
     nationality: { type: String, required: true },
     image: { type: String, required: true },
+    stats: {
+        kills: { type: Number, default: 0 },
+        aces: { type: Number, default: 0 },
+        digs: { type: Number, default: 0 },
+        blocks: { type: Number, default: 0 }
+    },
     createdAt: { type: Date, default: Date.now }
 });
 const Player = mongoose.model('Player', playerSchema);
@@ -888,6 +898,19 @@ app.post('/admin/login', async (req, res) => {
       details: error.stack
     });
   }
+});
+
+// Get all fans (members)
+app.get('/fans', async (req, res) => {
+    try {
+        const fans = await User.find({ role: 'member' })
+            .select('-password')
+            .sort({ createdAt: -1 });
+        res.json(fans);
+    } catch (error) {
+        console.error('Error fetching fans:', error);
+        res.status(500).json({ message: 'Error fetching fans' });
+    }
 });
 
 // Start server
