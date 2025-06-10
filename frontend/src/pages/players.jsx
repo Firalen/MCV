@@ -10,11 +10,15 @@ const Players = () => {
   useEffect(() => {
     const fetchPlayers = async () => {
       try {
-        const response = await axios.get('http://localhost:3000/players');
+        setLoading(true);
+        const response = await axios.get('http://localhost:3000/api/admin/players');
+        console.log('Players response:', response.data);
         setPlayers(response.data);
-        setLoading(false);
+        setError('');
       } catch (error) {
-        setError('Failed to fetch players');
+        console.error('Error fetching players:', error);
+        setError(error.response?.data?.message || 'Failed to fetch players');
+      } finally {
         setLoading(false);
       }
     };
@@ -26,7 +30,12 @@ const Players = () => {
 
   const filteredPlayers = selectedPosition === 'all' 
     ? players 
-    : players.filter(player => player.position === selectedPosition);
+    : players.filter(player => {
+        if (Array.isArray(player.positions)) {
+          return player.positions.includes(selectedPosition);
+        }
+        return player.position === selectedPosition;
+      });
 
   if (loading) {
     return (

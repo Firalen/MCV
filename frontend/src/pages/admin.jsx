@@ -5,20 +5,20 @@ import { useNavigate } from 'react-router-dom'
 import AddPlayer from '../components/AddPlayer'
 
 const Admin = () => {
-  const [activeTab, setActiveTab] = useState('players')
+  const [activeTab, setActiveTab] = useState('dashboard')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [stats, setStats] = useState({
     totalUsers: 0,
     totalPlayers: 0,
     upcomingFixtures: 0,
-    storeItems: 0
+    totalNews: 0
   })
   const [players, setPlayers] = useState([])
   const [fixtures, setFixtures] = useState([])
   const [storeItems, setStoreItems] = useState([])
   const [news, setNews] = useState([])
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const navigate = useNavigate()
 
   // Form states
@@ -47,101 +47,109 @@ const Admin = () => {
   })
 
   const tabs = [
-    { id: 'overview', name: 'Overview' },
+    { id: 'dashboard', name: 'Dashboard' },
     { id: 'players', name: 'Players' },
     { id: 'fixtures', name: 'Fixtures' },
     { id: 'store', name: 'Store' },
     { id: 'news', name: 'News' },
-    { id: 'settings', name: 'Settings' }
+    { id: 'users', name: 'Users' }
   ]
 
-  useEffect(() => {
-    // Check if user is admin
-    if (!user || user.role !== 'admin') {
-      navigate('/login')
-      return
-    }
-    fetchData()
-  }, [activeTab, user])
-
-  const fetchData = async () => {
+  const fetchStats = async () => {
     try {
-      setLoading(true)
-      setError(null)
-      const token = localStorage.getItem('token')
-
-      switch (activeTab) {
-        case 'players':
-          const response = await axios.get('http://localhost:3000/players', {
-            headers: { Authorization: `Bearer ${token}` }
-          })
-          setPlayers(response.data)
-          break
-        case 'fixtures':
-          const fixturesRes = await axios.get('http://localhost:3000/fixtures', {
-            headers: { Authorization: `Bearer ${token}` }
-          })
-          setFixtures(fixturesRes.data)
-          break
-        case 'store':
-          const storeRes = await axios.get('http://localhost:3000/store', {
-            headers: { Authorization: `Bearer ${token}` }
-          })
-          setStoreItems(storeRes.data)
-          break
-        case 'news':
-          const newsRes = await axios.get('http://localhost:3000/news', {
-            headers: { Authorization: `Bearer ${token}` }
-          })
-          setNews(newsRes.data)
-          break
-        default:
-          // Fetch overview stats
-          const [overviewUsers, overviewPlayers, overviewFixtures, overviewStore] = await Promise.all([
-            axios.get('http://localhost:3000/users', {
-              headers: { Authorization: `Bearer ${token}` }
-            }),
-            axios.get('http://localhost:3000/players', {
-              headers: { Authorization: `Bearer ${token}` }
-            }),
-            axios.get('http://localhost:3000/fixtures', {
-              headers: { Authorization: `Bearer ${token}` }
-            }),
-            axios.get('http://localhost:3000/store', {
-              headers: { Authorization: `Bearer ${token}` }
-            })
-          ])
-          
-          setStats({
-            totalUsers: overviewUsers.data.length,
-            totalPlayers: overviewPlayers.data.length,
-            upcomingFixtures: overviewFixtures.data.filter(f => f.status === 'Upcoming').length,
-            storeItems: overviewStore.data.length
-          })
+      console.log('Fetching admin stats...');
+      const token = localStorage.getItem('token');
+      console.log('Token available:', !!token);
+      
+      // Ensure token is set in headers
+      if (token) {
+        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       }
+      console.log('Axios headers:', axios.defaults.headers.common);
+      
+      const response = await axios.get('http://localhost:3000/api/admin/stats');
+      console.log('Stats response:', response.data);
+      setStats(response.data);
     } catch (error) {
-      if (error.response?.status === 401) {
-        navigate('/login')
-      } else if (error.response?.status === 403) {
-        setError('You do not have permission to access this page')
-      } else {
-        setError(error.response?.data?.message || 'An error occurred')
-      }
+      console.error('Error fetching stats:', error);
+      console.error('Error details:', {
+        status: error.response?.status,
+        message: error.response?.data?.message,
+        headers: error.config?.headers
+      });
+      setError('Failed to fetch statistics');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
+  const fetchPlayers = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.error('No token found');
+        setError('Authentication required');
+        return;
+      }
+
+      // Set the authorization header
+      const config = {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      };
+      
+      console.log('Fetching players with config:', config);
+      
+      const response = await axios.get('http://localhost:3000/api/admin/players', config);
+      console.log('Players response:', response.data);
+      
+      if (response.data) {
+        setPlayers(response.data);
+        setError(null); // Clear any previous errors
+      } else {
+        console.error('No data received from players endpoint');
+        setError('No player data received');
+      }
+    } catch (error) {
+      console.error('Error fetching players:', error);
+      console.error('Error details:', {
+        status: error.response?.status,
+        message: error.response?.data?.message,
+        headers: error.config?.headers,
+        url: error.config?.url
+      });
+      
+      if (error.response?.status === 401) {
+        setError('Authentication failed. Please log in again.');
+        // Optionally redirect to login
+        navigate('/login');
+      } else if (error.response?.status === 403) {
+        setError('You do not have permission to view players.');
+      } else {
+        setError(error.response?.data?.message || 'Failed to fetch players. Please try again.');
+      }
+    }
+  }
+
+  useEffect(() => {
+    if (!user || user.role !== 'admin') {
+      navigate('/login');
+      return;
+    }
+    console.log('Admin component mounted, fetching data...');
+    console.log('Current user:', user);
+    fetchStats();
+    fetchPlayers();
+  }, [user]);
+
   const handlePlayerAdded = (newPlayer) => {
-    setPlayers([...players, newPlayer])
+    setPlayers(prevPlayers => [...prevPlayers, newPlayer])
   }
 
   const handleDeletePlayer = async (id) => {
     try {
-      const token = localStorage.getItem('token')
-      await axios.delete(`http://localhost:3000/players/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
+      await axios.delete(`http://localhost:3000/api/admin/players/${id}`)
       setPlayers(players.filter(player => player._id !== id))
     } catch (error) {
       setError(error.response?.data?.message || 'Failed to delete player')
@@ -151,10 +159,7 @@ const Admin = () => {
   const handleAddFixture = async (e) => {
     e.preventDefault()
     try {
-      const token = localStorage.getItem('token')
-      await axios.post('http://localhost:3000/fixtures', newFixture, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
+      await axios.post('http://localhost:3000/api/admin/fixtures', newFixture)
       setNewFixture({
         opponent: '',
         date: '',
@@ -162,7 +167,7 @@ const Admin = () => {
         venue: '',
         competition: ''
       })
-      fetchData()
+      fetchStats()
     } catch (err) {
       setError('Error adding fixture')
     }
@@ -170,7 +175,7 @@ const Admin = () => {
 
   const handleUpdateFixture = async (id, fixtureData) => {
     try {
-      const response = await axios.put(`http://localhost:3000/fixtures/${id}`, fixtureData)
+      const response = await axios.put(`http://localhost:3000/api/admin/fixtures/${id}`, fixtureData)
       setFixtures(fixtures.map(fixture => fixture._id === id ? response.data : fixture))
     } catch (error) {
       setError(error.response?.data?.message || 'Failed to update fixture')
@@ -179,7 +184,7 @@ const Admin = () => {
 
   const handleDeleteFixture = async (id) => {
     try {
-      await axios.delete(`http://localhost:3000/fixtures/${id}`)
+      await axios.delete(`http://localhost:3000/api/admin/fixtures/${id}`)
       setFixtures(fixtures.filter(fixture => fixture._id !== id))
     } catch (error) {
       setError(error.response?.data?.message || 'Failed to delete fixture')
@@ -188,7 +193,7 @@ const Admin = () => {
 
   const handleAddStoreItem = async (itemData) => {
     try {
-      const response = await axios.post('http://localhost:3000/store', itemData)
+      const response = await axios.post('http://localhost:3000/api/admin/store', itemData)
       setStoreItems([...storeItems, response.data])
     } catch (error) {
       setError(error.response?.data?.message || 'Failed to add store item')
@@ -197,7 +202,7 @@ const Admin = () => {
 
   const handleUpdateStoreItem = async (id, itemData) => {
     try {
-      const response = await axios.put(`http://localhost:3000/store/${id}`, itemData)
+      const response = await axios.put(`http://localhost:3000/api/admin/store/${id}`, itemData)
       setStoreItems(storeItems.map(item => item._id === id ? response.data : item))
     } catch (error) {
       setError(error.response?.data?.message || 'Failed to update store item')
@@ -206,7 +211,7 @@ const Admin = () => {
 
   const handleDeleteStoreItem = async (id) => {
     try {
-      await axios.delete(`http://localhost:3000/store/${id}`)
+      await axios.delete(`http://localhost:3000/api/admin/store/${id}`)
       setStoreItems(storeItems.filter(item => item._id !== id))
     } catch (error) {
       setError(error.response?.data?.message || 'Failed to delete store item')
@@ -216,17 +221,14 @@ const Admin = () => {
   const handleAddNews = async (e) => {
     e.preventDefault()
     try {
-      const token = localStorage.getItem('token')
-      await axios.post('http://localhost:3000/news', newNews, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
+      await axios.post('http://localhost:3000/api/admin/news', newNews)
       setNewNews({
         title: '',
         content: '',
         image: '',
         category: ''
       })
-      fetchData()
+      fetchStats()
     } catch (err) {
       setError('Error adding news')
     }
@@ -234,7 +236,7 @@ const Admin = () => {
 
   const handleUpdateNews = async (id, newsData) => {
     try {
-      const response = await axios.put(`http://localhost:3000/news/${id}`, newsData)
+      const response = await axios.put(`http://localhost:3000/api/admin/news/${id}`, newsData)
       setNews(news.map(item => item._id === id ? response.data : item))
     } catch (error) {
       setError(error.response?.data?.message || 'Failed to update news')
@@ -243,7 +245,7 @@ const Admin = () => {
 
   const handleDeleteNews = async (id) => {
     try {
-      await axios.delete(`http://localhost:3000/news/${id}`)
+      await axios.delete(`http://localhost:3000/api/admin/news/${id}`)
       setNews(news.filter(item => item._id !== id))
     } catch (error) {
       setError(error.response?.data?.message || 'Failed to delete news')
@@ -254,209 +256,248 @@ const Admin = () => {
     switch (activeTab) {
       case 'players':
         return (
-          <div className="space-y-6">
-            <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h2 className="text-lg font-semibold text-gray-900">Add New Player</h2>
-              </div>
-              <div className="p-6">
-                <AddPlayer onPlayerAdded={handlePlayerAdded} />
-              </div>
-            </div>
-
-            <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h2 className="text-lg font-semibold text-gray-900">Players List</h2>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Position</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Number</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Age</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nationality</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {players.map((player) => (
-                      <tr key={player._id}>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{player.name}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{player.position}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{player.number}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{player.age}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{player.nationality}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          <button 
-                            onClick={() => handleDeletePlayer(player._id)}
-                            className="text-red-600 hover:text-red-900"
-                          >
-                            Delete
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+          <div>
+            <AddPlayer onPlayerAdded={handlePlayerAdded} />
+            <div className="mt-8">
+              <h3 className="text-xl font-semibold mb-4">Current Players</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {players.map(player => (
+                  <div key={player._id} className="bg-white p-4 rounded-lg shadow">
+                    <img src={player.image} alt={player.name} className="w-full h-48 object-cover rounded-lg mb-4" />
+                    <h4 className="text-lg font-semibold">{player.name}</h4>
+                    <div className="text-gray-600">
+                      {Array.isArray(player.positions) ? (
+                        player.positions.map((position, index) => (
+                          <span key={index} className="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm mr-2 mb-2">
+                            {position}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm">
+                          {player.position}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-gray-600">#{player.number}</p>
+                    <div className="mt-4 flex justify-end space-x-2">
+                      <button
+                        onClick={() => handleDeletePlayer(player._id)}
+                        className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
         )
-
       case 'fixtures':
         return (
-          <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-              <h2 className="text-lg font-semibold text-gray-900">Fixtures Management</h2>
-              <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                Add New Fixture
+          <div>
+            <form onSubmit={handleAddFixture} className="bg-white p-6 rounded-lg shadow-md mb-8">
+              <h3 className="text-xl font-semibold mb-4">Add New Fixture</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <input
+                  type="text"
+                  placeholder="Opponent"
+                  value={newFixture.opponent}
+                  onChange={(e) => setNewFixture({ ...newFixture, opponent: e.target.value })}
+                  className="border p-2 rounded"
+                  required
+                />
+                <input
+                  type="date"
+                  value={newFixture.date}
+                  onChange={(e) => setNewFixture({ ...newFixture, date: e.target.value })}
+                  className="border p-2 rounded"
+                  required
+                />
+                <input
+                  type="time"
+                  value={newFixture.time}
+                  onChange={(e) => setNewFixture({ ...newFixture, time: e.target.value })}
+                  className="border p-2 rounded"
+                  required
+                />
+                <input
+                  type="text"
+                  placeholder="Venue"
+                  value={newFixture.venue}
+                  onChange={(e) => setNewFixture({ ...newFixture, venue: e.target.value })}
+                  className="border p-2 rounded"
+                  required
+                />
+                <input
+                  type="text"
+                  placeholder="Competition"
+                  value={newFixture.competition}
+                  onChange={(e) => setNewFixture({ ...newFixture, competition: e.target.value })}
+                  className="border p-2 rounded"
+                  required
+                />
+              </div>
+              <button
+                type="submit"
+                className="mt-4 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+              >
+                Add Fixture
               </button>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Opponent</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Venue</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {fixtures.map((fixture) => (
-                    <tr key={fixture._id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{fixture.opponent}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{new Date(fixture.date).toLocaleDateString()}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{fixture.venue}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
-                          {fixture.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        <button className="text-blue-600 hover:text-blue-900 mr-3">Edit</button>
-                        <button className="text-red-600 hover:text-red-900">Delete</button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            </form>
+            <div className="mt-8">
+              <h3 className="text-xl font-semibold mb-4">Upcoming Fixtures</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {fixtures.map(fixture => (
+                  <div key={fixture._id} className="bg-white p-4 rounded-lg shadow">
+                    <h4 className="text-lg font-semibold">{fixture.opponent}</h4>
+                    <p className="text-gray-600">{new Date(fixture.date).toLocaleDateString()}</p>
+                    <p className="text-gray-600">{fixture.time}</p>
+                    <p className="text-gray-600">{fixture.venue}</p>
+                    <p className="text-gray-600">{fixture.competition}</p>
+                    <div className="mt-4 flex justify-end space-x-2">
+                      <button
+                        onClick={() => handleDeleteFixture(fixture._id)}
+                        className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )
-
-      case 'store':
+      case 'news':
         return (
-          <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-              <h2 className="text-lg font-semibold text-gray-900">Store Management</h2>
-              <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                Add New Item
+          <div>
+            <form onSubmit={handleAddNews} className="bg-white p-6 rounded-lg shadow-md mb-8">
+              <h3 className="text-xl font-semibold mb-4">Add News Article</h3>
+              <div className="space-y-4">
+                <input
+                  type="text"
+                  placeholder="Title"
+                  value={newNews.title}
+                  onChange={(e) => setNewNews({ ...newNews, title: e.target.value })}
+                  className="w-full border p-2 rounded"
+                  required
+                />
+                <textarea
+                  placeholder="Content"
+                  value={newNews.content}
+                  onChange={(e) => setNewNews({ ...newNews, content: e.target.value })}
+                  className="w-full border p-2 rounded h-32"
+                  required
+                />
+                <input
+                  type="text"
+                  placeholder="Image URL"
+                  value={newNews.image}
+                  onChange={(e) => setNewNews({ ...newNews, image: e.target.value })}
+                  className="w-full border p-2 rounded"
+                  required
+                />
+                <input
+                  type="text"
+                  placeholder="Category"
+                  value={newNews.category}
+                  onChange={(e) => setNewNews({ ...newNews, category: e.target.value })}
+                  className="w-full border p-2 rounded"
+                  required
+                />
+              </div>
+              <button
+                type="submit"
+                className="mt-4 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+              >
+                Add News
               </button>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Item Name</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Price</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Stock</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {storeItems.map((item) => (
-                    <tr key={item._id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.name}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">ETB {item.price}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.stock}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          item.status === 'In Stock' ? 'bg-green-100 text-green-800' :
-                          item.status === 'Low Stock' ? 'bg-yellow-100 text-yellow-800' :
-                          'bg-red-100 text-red-800'
-                        }`}>
-                          {item.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        <button className="text-blue-600 hover:text-blue-900 mr-3">Edit</button>
-                        <button className="text-red-600 hover:text-red-900">Delete</button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            </form>
+            <div className="mt-8">
+              <h3 className="text-xl font-semibold mb-4">News Articles</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {news.map(item => (
+                  <div key={item._id} className="bg-white p-4 rounded-lg shadow">
+                    <img src={item.image} alt={item.title} className="w-full h-48 object-cover rounded-lg mb-4" />
+                    <h4 className="text-lg font-semibold">{item.title}</h4>
+                    <p className="text-gray-600">{item.category}</p>
+                    <div className="mt-4 flex justify-end space-x-2">
+                      <button
+                        onClick={() => handleDeleteNews(item._id)}
+                        className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )
-
+      case 'dashboard':
       default:
-        return null
+        return (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-white p-6 rounded-lg shadow">
+              <h3 className="text-lg font-semibold text-gray-800">Total Users</h3>
+              <p className="text-3xl font-bold text-blue-600">{stats.totalUsers}</p>
+            </div>
+            <div className="bg-white p-6 rounded-lg shadow">
+              <h3 className="text-lg font-semibold text-gray-800">Total Players</h3>
+              <p className="text-3xl font-bold text-blue-600">{stats.totalPlayers}</p>
+            </div>
+            <div className="bg-white p-6 rounded-lg shadow">
+              <h3 className="text-lg font-semibold text-gray-800">Upcoming Fixtures</h3>
+              <p className="text-3xl font-bold text-blue-600">{stats.upcomingFixtures}</p>
+            </div>
+            <div className="bg-white p-6 rounded-lg shadow">
+              <h3 className="text-lg font-semibold text-gray-800">News Articles</h3>
+              <p className="text-3xl font-bold text-blue-600">{stats.totalNews}</p>
+            </div>
+          </div>
+        )
     }
   }
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="text-xl text-gray-600">Loading...</div>
-      </div>
-    )
+  if (authLoading) {
+    return <div>Loading...</div>
   }
 
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="text-xl text-red-600">{error}</div>
-      </div>
-    )
+  if (!user || user.role !== 'admin') {
+    return <div>Access denied. Admin privileges required.</div>
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white pt-20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-12">
-          <div>
-            <h1 className="text-4xl font-bold text-gray-900 mb-2">Admin Dashboard</h1>
-            <p className="text-lg text-gray-600">Welcome back, {user?.name}</p>
-          </div>
-          <button className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors duration-200">
-            Generate Report
-          </button>
+    <div className="container mx-auto px-4 py-8">
+      <h1 className="text-3xl font-bold mb-8">Admin Dashboard</h1>
+      
+      {error && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+          {error}
         </div>
+      )}
 
-        {error && (
-          <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
-            {error}
-          </div>
-        )}
-
-        {/* Tabs */}
-        <div className="bg-white rounded-xl shadow-lg mb-8">
-          <div className="border-b border-gray-200">
-            <nav className="flex -mb-px overflow-x-auto">
-              {tabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`px-6 py-4 text-sm font-medium border-b-2 whitespace-nowrap ${
-                    activeTab === tab.id
-                      ? 'border-blue-600 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  {tab.name}
-                </button>
-              ))}
-            </nav>
-          </div>
+      <div className="bg-white rounded-lg shadow-md mb-8">
+        <div className="flex border-b">
+          {tabs.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`px-6 py-3 font-medium ${
+                activeTab === tab.id
+                  ? 'border-b-2 border-blue-500 text-blue-600'
+                  : 'text-gray-600 hover:text-gray-800'
+              }`}
+            >
+              {tab.name}
+            </button>
+          ))}
         </div>
+      </div>
 
+      <div className="mt-8">
         {renderTabContent()}
       </div>
     </div>

@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import mug2Logo from '../assets/mug2.webp';
-import axios from 'axios';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -18,31 +17,12 @@ const Login = () => {
     setLoading(true);
 
     try {
-      console.log('Attempting login...');
-      const response = await axios.post('http://localhost:3000/login', {
-        email,
-        password
-      });
-
-      console.log('Login response:', response.data);
-
-      // Store token in localStorage
-      localStorage.setItem('token', response.data.token);
-      
-      // Store user info including role
-      const userData = response.data.user;
-      console.log('User data:', userData);
-      localStorage.setItem('user', JSON.stringify(userData));
-      
-      // Call the login function from AuthContext
-      await login(email, password);
+      const userData = await login(email, password);
       
       // Check user role and redirect accordingly
       if (userData && userData.role === 'admin') {
-        console.log('User is admin, redirecting to admin page...');
         navigate('/admin', { replace: true });
       } else {
-        console.log('User is regular user, redirecting to home...');
         navigate('/', { replace: true });
       }
     } catch (err) {

@@ -10,6 +10,29 @@ const StoreItem = require('../models/StoreItem');
 const News = require('../models/News');
 const User = require('../models/User');
 
+// Admin stats endpoint
+router.get('/stats', auth, admin, async (req, res) => {
+  try {
+    console.log('Admin stats - User:', req.user);
+    const [totalUsers, totalPlayers, totalFixtures, totalNews] = await Promise.all([
+      User.countDocuments(),
+      Player.countDocuments(),
+      Fixture.countDocuments(),
+      News.countDocuments()
+    ]);
+
+    res.json({
+      totalUsers,
+      totalPlayers,
+      totalFixtures,
+      totalNews
+    });
+  } catch (error) {
+    console.error('Error fetching admin stats:', error);
+    res.status(500).json({ message: 'Error fetching admin stats' });
+  }
+});
+
 // Configure multer for file uploads
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {

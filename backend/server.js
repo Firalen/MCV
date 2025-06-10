@@ -10,6 +10,11 @@ const path = require('path');
 const fs = require('fs');
 const auth = require('./middleware/auth');
 const admin = require('./middleware/admin');
+const User = require('./models/User');
+const Player = require('./models/Player');
+const Fixture = require('./models/Fixture');
+const StoreItem = require('./models/StoreItem');
+const News = require('./models/News');
 
 // Load environment variables
 dotenv.config();
@@ -161,85 +166,11 @@ app.use((req, res, next) => {
     next();
 });
 
-// ✅ User schema & model
-const userSchema = new mongoose.Schema({
-    name: { type: String, required: true },
-    email: { type: String, required: true, unique: true },
-    password: { type: String, required: true },
-    role: { type: String, enum: ['user', 'admin', 'member'], default: 'user' },
-    createdAt: { type: Date, default: Date.now },
-    lastLogin: { type: Date }
-});
-const User = mongoose.model("User", userSchema);
+// Import admin routes
+const adminRoutes = require('./routes/admin');
 
-// Player schema & model
-const playerSchema = new mongoose.Schema({
-    name: { type: String, required: true },
-    position: { 
-        type: String, 
-        required: true,
-        enum: ['Outside Hitter', 'Middle Blocker', 'Opposite Hitter', 'Setter', 'Libero', 'Defensive Specialist']
-    },
-    number: { type: Number, required: true },
-    age: { type: Number, required: true },
-    nationality: { type: String, required: true },
-    image: { type: String, required: true },
-    stats: {
-        kills: { type: Number, default: 0 },
-        aces: { type: Number, default: 0 },
-        digs: { type: Number, default: 0 },
-        blocks: { type: Number, default: 0 }
-    },
-    createdAt: { type: Date, default: Date.now }
-});
-const Player = mongoose.model('Player', playerSchema);
-
-// Fixture schema & model
-const fixtureSchema = new mongoose.Schema({
-    opponent: { type: String, required: true },
-    date: { type: Date, required: true },
-    time: { type: String, required: true },
-    venue: { type: String, required: true },
-    competition: { type: String, required: true },
-    createdAt: { type: Date, default: Date.now }
-});
-const Fixture = mongoose.model('Fixture', fixtureSchema);
-
-// Store Item schema & model
-const storeItemSchema = new mongoose.Schema({
-    name: { type: String, required: true },
-    price: { type: Number, required: true },
-    stock: { type: Number, required: true, default: 0 },
-    status: {
-        type: String,
-        required: true,
-        enum: ['In Stock', 'Low Stock', 'Out of Stock'],
-        default: 'In Stock'
-    },
-    description: { type: String, required: true },
-    image: { type: String },
-    category: {
-        type: String,
-        required: true,
-        enum: ['Jerseys', 'Accessories', 'Equipment']
-    },
-    sizes: [{
-        type: String,
-        enum: ['S', 'M', 'L', 'XL', 'XXL']
-    }],
-    createdAt: { type: Date, default: Date.now }
-});
-const StoreItem = mongoose.model('StoreItem', storeItemSchema);
-
-// News schema & model
-const newsSchema = new mongoose.Schema({
-    title: { type: String, required: true },
-    content: { type: String, required: true },
-    image: { type: String, required: true },
-    category: { type: String, required: true },
-    createdAt: { type: Date, default: Date.now }
-});
-const News = mongoose.model('News', newsSchema);
+// Mount admin routes
+app.use('/api/admin', adminRoutes);
 
 // ✅ Register route
 app.post("/register", checkDatabaseConnection, async (req, res) => {
@@ -327,28 +258,39 @@ app.post("/register", checkDatabaseConnection, async (req, res) => {
 app.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
+    console.log('Login attempt for:', email);
+    
     const user = await User.findOne({ email });
+    console.log('User found:', user ? 'Yes' : 'No');
     
     if (!user) {
+      console.log('Login failed - User not found');
       return res.status(401).json({ message: 'Invalid email or password' });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
+    console.log('Password match:', isMatch ? 'Yes' : 'No');
+    
     if (!isMatch) {
+      console.log('Login failed - Invalid password');
       return res.status(401).json({ message: 'Invalid email or password' });
     }
 
     // Update last login
     user.lastLogin = new Date();
     await user.save();
+    console.log('Last login updated');
 
+    // Create token with user ID and role
     const token = jwt.sign(
-      { userId: user._id, role: user.role },
+      { id: user._id, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: '24h' }
     );
+    console.log('Token generated');
 
-    res.json({
+    // Send response with token and user data
+    const response = {
       token,
       user: {
         id: user._id,
@@ -356,7 +298,9 @@ app.post('/login', async (req, res) => {
         email: user.email,
         role: user.role
       }
-    });
+    };
+    console.log('Login successful - Sending response');
+    res.json(response);
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ message: error.message });
@@ -366,7 +310,7 @@ app.post('/login', async (req, res) => {
 // Profile route
 app.get('/profile', auth, async (req, res) => {
   try {
-    const user = await User.findById(req.user.userId).select('-password');
+    const user = await User.findById(req.user.id).select('-password');
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
@@ -381,7 +325,7 @@ app.get('/profile', auth, async (req, res) => {
 app.put("/profile", auth, async (req, res) => {
     try {
         const { name, email } = req.body;
-        const user = await User.findById(req.user.userId);
+        const user = await User.findById(req.user.id);
         
         if (!user) {
             return res.status(404).json({ message: "User not found" });
@@ -409,525 +353,8 @@ app.put("/profile", auth, async (req, res) => {
     }
 });
 
-// Admin Routes
-// Players routes
-app.get('/api/admin/players', admin, async (req, res) => {
-    try {
-        const players = await Player.find().sort({ number: 1 });
-        res.json(players);
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
-});
-
-app.post('/api/admin/players', admin, upload.single('image'), async (req, res) => {
-    try {
-        const player = new Player({
-            name: req.body.name,
-            position: req.body.position,
-            number: req.body.number,
-            age: req.body.age,
-            nationality: req.body.nationality,
-            image: req.file ? `/uploads/players/${req.file.filename}` : null,
-            stats: {
-                kills: 0,
-                aces: 0,
-                digs: 0,
-                blocks: 0
-            }
-        });
-
-        const savedPlayer = await player.save();
-        res.status(201).json(savedPlayer);
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
-});
-
-app.put('/api/admin/players/:id', admin, async (req, res) => {
-    try {
-        const player = await Player.findById(req.params.id);
-        if (!player) return res.status(404).json({ message: 'Player not found' });
-
-        Object.assign(player, req.body);
-        const updatedPlayer = await player.save();
-        res.json(updatedPlayer);
-    } catch (error) {
-        res.status(400).json({ message: error.message });
-    }
-});
-
-app.delete('/api/admin/players/:id', admin, async (req, res) => {
-    try {
-        const player = await Player.findById(req.params.id);
-        if (!player) return res.status(404).json({ message: 'Player not found' });
-
-        await Player.deleteOne({ _id: req.params.id });
-        res.json({ message: 'Player deleted' });
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
-});
-
-// Fixtures routes
-app.get('/api/admin/fixtures', admin, async (req, res) => {
-    try {
-        const fixtures = await Fixture.find().sort({ date: 1 });
-        res.json(fixtures);
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
-});
-
-app.post('/api/admin/fixtures', admin, async (req, res) => {
-    const fixture = new Fixture({
-        opponent: req.body.opponent,
-        date: req.body.date,
-        time: req.body.time,
-        venue: req.body.venue,
-        competition: req.body.competition
-    });
-
-    try {
-        const newFixture = await fixture.save();
-        res.status(201).json(newFixture);
-    } catch (error) {
-        res.status(400).json({ message: error.message });
-    }
-});
-
-app.put('/api/admin/fixtures/:id', admin, async (req, res) => {
-    try {
-        const fixture = await Fixture.findById(req.params.id);
-        if (!fixture) return res.status(404).json({ message: 'Fixture not found' });
-
-        Object.assign(fixture, req.body);
-        const updatedFixture = await fixture.save();
-        res.json(updatedFixture);
-    } catch (error) {
-        res.status(400).json({ message: error.message });
-    }
-});
-
-app.delete('/api/admin/fixtures/:id', admin, async (req, res) => {
-    try {
-        const fixture = await Fixture.findById(req.params.id);
-        if (!fixture) return res.status(404).json({ message: 'Fixture not found' });
-
-        await Fixture.deleteOne({ _id: req.params.id });
-        res.json({ message: 'Fixture deleted' });
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
-});
-
-// Store routes
-app.get('/api/admin/store', admin, async (req, res) => {
-    try {
-        const items = await StoreItem.find().sort({ name: 1 });
-        res.json(items);
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
-});
-
-app.post('/api/admin/store', admin, async (req, res) => {
-    const item = new StoreItem({
-        name: req.body.name,
-        price: req.body.price,
-        stock: req.body.stock,
-        status: req.body.status,
-        description: req.body.description,
-        image: req.body.image,
-        category: req.body.category,
-        sizes: req.body.sizes
-    });
-
-    try {
-        const newItem = await item.save();
-        res.status(201).json(newItem);
-    } catch (error) {
-        res.status(400).json({ message: error.message });
-    }
-});
-
-app.put('/api/admin/store/:id', admin, async (req, res) => {
-    try {
-        const item = await StoreItem.findById(req.params.id);
-        if (!item) return res.status(404).json({ message: 'Item not found' });
-
-        Object.assign(item, req.body);
-        const updatedItem = await item.save();
-        res.json(updatedItem);
-    } catch (error) {
-        res.status(400).json({ message: error.message });
-    }
-});
-
-app.delete('/api/admin/store/:id', admin, async (req, res) => {
-    try {
-        const item = await StoreItem.findById(req.params.id);
-        if (!item) return res.status(404).json({ message: 'Item not found' });
-
-        await StoreItem.deleteOne({ _id: req.params.id });
-        res.json({ message: 'Item deleted' });
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
-});
-
-// News routes
-app.get('/api/admin/news', admin, async (req, res) => {
-    try {
-        const news = await News.find().sort({ date: -1 });
-        res.json(news);
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
-});
-
-app.post('/api/admin/news', admin, async (req, res) => {
-    const news = new News({
-        title: req.body.title,
-        content: req.body.content,
-        image: req.body.image,
-        category: req.body.category
-    });
-
-    try {
-        const newNews = await news.save();
-        res.status(201).json(newNews);
-    } catch (error) {
-        res.status(400).json({ message: error.message });
-    }
-});
-
-app.put('/api/admin/news/:id', admin, async (req, res) => {
-    try {
-        const news = await News.findById(req.params.id);
-        if (!news) return res.status(404).json({ message: 'News not found' });
-
-        Object.assign(news, req.body);
-        const updatedNews = await news.save();
-        res.json(updatedNews);
-    } catch (error) {
-        res.status(400).json({ message: error.message });
-    }
-});
-
-app.delete('/api/admin/news/:id', admin, async (req, res) => {
-    try {
-        const news = await News.findById(req.params.id);
-        if (!news) return res.status(404).json({ message: 'News not found' });
-
-        await News.deleteOne({ _id: req.params.id });
-        res.json({ message: 'News deleted' });
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
-});
-
-// Users route for admin
-app.get('/api/admin/users', admin, async (req, res) => {
-    try {
-        const users = await User.find().select('-password');
-        res.json(users);
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
-});
-
-// Player routes
-app.get('/players', async (req, res) => {
-  try {
-    const players = await Player.find().sort({ number: 1 });
-    res.json(players);
-  } catch (error) {
-    res.status(500).json({ message: 'Error fetching players' });
-  }
-});
-
-app.post('/players', admin, upload.single('image'), async (req, res) => {
-  try {
-    const player = new Player({
-      name: req.body.name,
-      position: req.body.position,
-      number: req.body.number,
-      age: req.body.age,
-      nationality: req.body.nationality,
-      image: req.file ? `/uploads/players/${req.file.filename}` : null,
-      stats: {
-        kills: 0,
-        aces: 0,
-        digs: 0,
-        blocks: 0
-      }
-    });
-
-    const savedPlayer = await player.save();
-    res.status(201).json(savedPlayer);
-  } catch (error) {
-    res.status(500).json({ message: 'Error creating player' });
-  }
-});
-
-// Fixture routes
-app.get('/fixtures', async (req, res) => {
-  try {
-    const fixtures = await Fixture.find().sort({ date: 1 });
-    res.json(fixtures);
-  } catch (error) {
-    res.status(500).json({ message: 'Error fetching fixtures' });
-  }
-});
-
-app.post('/fixtures', admin, async (req, res) => {
-  try {
-    const fixture = new Fixture(req.body);
-    await fixture.save();
-    res.status(201).json(fixture);
-  } catch (error) {
-    res.status(500).json({ message: 'Error creating fixture' });
-  }
-});
-
-// News routes
-app.get('/news', async (req, res) => {
-  try {
-    const news = await News.find().sort({ createdAt: -1 });
-    res.json(news);
-  } catch (error) {
-    res.status(500).json({ message: 'Error fetching news' });
-  }
-});
-
-app.post('/news', admin, async (req, res) => {
-  try {
-    const news = new News(req.body);
-    await news.save();
-    res.status(201).json(news);
-  } catch (error) {
-    res.status(500).json({ message: 'Error creating news' });
-  }
-});
-
-// Admin Registration Route
-app.post('/register-admin', async (req, res) => {
-  console.log('\n=== Admin Registration Request ===');
-  console.log('Time:', new Date().toISOString());
-  console.log('Request body:', { ...req.body, password: '***' });
-  console.log('Headers:', req.headers);
-  console.log('MongoDB Connection State:', mongoose.connection.readyState);
-  
-  try {
-    const { name, email, password } = req.body;
-
-    // Validate input
-    if (!name || !email || !password) {
-      console.log('Validation failed - missing fields:', { 
-        name: !!name, 
-        email: !!email, 
-        password: !!password 
-      });
-      return res.status(400).json({ 
-        message: 'All fields are required',
-        details: {
-          name: !name ? 'Name is required' : null,
-          email: !email ? 'Email is required' : null,
-          password: !password ? 'Password is required' : null
-        }
-      });
-    }
-
-    // Check if user already exists
-    console.log('Checking for existing user with email:', email);
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      console.log('User already exists:', email);
-      return res.status(400).json({ 
-        message: 'User already exists',
-        details: 'An account with this email already exists'
-      });
-    }
-
-    // Hash password
-    console.log('Hashing password...');
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-
-    // Create new admin user
-    console.log('Creating new admin user...');
-    const user = new User({
-      name,
-      email,
-      password: hashedPassword,
-      role: 'admin'
-    });
-
-    // Save user
-    console.log('Saving user to database...');
-    await user.save();
-    console.log('Admin user created successfully:', email);
-
-    // Generate token
-    console.log('Generating JWT token...');
-    const token = jwt.sign(
-      { userId: user._id, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: '24h' }
-    );
-
-    console.log('Sending success response...');
-    res.status(201).json({
-      token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role
-      }
-    });
-  } catch (error) {
-    console.error('\n❌ Admin registration error:');
-    console.error('Error name:', error.name);
-    console.error('Error message:', error.message);
-    console.error('Error stack:', error.stack);
-    console.error('MongoDB Connection State:', mongoose.connection.readyState);
-    
-    res.status(500).json({ 
-      message: 'Error creating admin account',
-      error: error.message,
-      details: error.stack
-    });
-  }
-});
-
-// Check Admin Accounts Route (for debugging)
-app.get('/check-admin-accounts', async (req, res) => {
-  try {
-    const adminUsers = await User.find({ role: 'admin' }).select('-password');
-    console.log('Found admin users:', adminUsers);
-    res.json({ adminUsers });
-  } catch (error) {
-    console.error('Error checking admin accounts:', error);
-    res.status(500).json({ message: 'Error checking admin accounts' });
-  }
-});
-
-// Admin Login Route
-app.post('/admin/login', async (req, res) => {
-  console.log('\n=== Admin Login Request ===');
-  console.log('Time:', new Date().toISOString());
-  console.log('Request body:', { ...req.body, password: '***' });
-  console.log('Headers:', req.headers);
-  console.log('MongoDB Connection State:', mongoose.connection.readyState);
-  
-  try {
-    const { email, password } = req.body;
-
-    if (!email || !password) {
-      console.log('Missing credentials:', { email: !!email, password: !!password });
-      return res.status(400).json({ 
-        message: 'Email and password are required',
-        details: {
-          email: !email ? 'Email is required' : null,
-          password: !password ? 'Password is required' : null
-        }
-      });
-    }
-
-    // Find user
-    console.log('Looking for user with email:', email);
-    const user = await User.findOne({ email });
-    
-    if (!user) {
-      console.log('User not found:', email);
-      return res.status(400).json({ message: 'Invalid email or password' });
-    }
-
-    console.log('User found:', {
-      id: user._id,
-      email: user.email,
-      role: user.role,
-      hasPassword: !!user.password
-    });
-
-    // Check if user is admin
-    if (user.role !== 'admin') {
-      console.log('User is not an admin:', email);
-      return res.status(403).json({ message: 'Access denied. Admin only.' });
-    }
-
-    // Check password
-    console.log('Verifying password...');
-    const validPassword = await bcrypt.compare(password, user.password);
-    console.log('Password verification result:', validPassword);
-    
-    if (!validPassword) {
-      console.log('Invalid password for admin:', email);
-      return res.status(400).json({ message: 'Invalid email or password' });
-    }
-
-    // Update last login
-    console.log('Updating last login...');
-    user.lastLogin = new Date();
-    await user.save();
-
-    // Generate token
-    console.log('Generating JWT token...');
-    const token = jwt.sign(
-      { userId: user._id, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: '24h' }
-    );
-
-    console.log('Admin login successful:', email);
-
-    res.json({
-      token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role
-      }
-    });
-  } catch (error) {
-    console.error('\n❌ Admin login error:');
-    console.error('Error name:', error.name);
-    console.error('Error message:', error.message);
-    console.error('Error stack:', error.stack);
-    console.error('MongoDB Connection State:', mongoose.connection.readyState);
-    
-    res.status(500).json({ 
-      message: 'Error during admin login',
-      error: error.message,
-      details: error.stack
-    });
-  }
-});
-
-// Get all fans (members)
-app.get('/fans', async (req, res) => {
-    try {
-        const fans = await User.find({ role: 'member' })
-            .select('-password')
-            .sort({ createdAt: -1 });
-        res.json(fans);
-    } catch (error) {
-        console.error('Error fetching fans:', error);
-        res.status(500).json({ message: 'Error fetching fans' });
-    }
-});
-
 // Start server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-  console.log('Available routes:');
-  console.log('- POST /admin/login');
-  console.log('- GET /check-admin-accounts');
-  console.log('- POST /register-admin');
-  console.log('- POST /login');
-  console.log('- POST /register');
+    console.log(`Server is running on port ${PORT}`);
 });
