@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import Image from "../assets/mugherhis.jpg";
 
 const ClubInfo = () => {
   const [activeTab, setActiveTab] = useState('history');
@@ -131,7 +132,7 @@ const ClubInfo = () => {
               </div>
               <div className="md:w-1/2">
                 <img
-                  src={content.history.image}
+                  src={Image}
                   alt="Club History"
                   className="rounded-lg shadow-md w-full h-64 object-cover"
                 />
