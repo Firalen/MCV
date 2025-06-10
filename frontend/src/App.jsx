@@ -7,7 +7,7 @@ import Login from './pages/login';
 import Register from './pages/register';
 import AdminLogin from './pages/admin-login';
 import RegisterAdmin from './pages/register-admin';
-import AdminDashboard from './pages/admin-dashboard';
+import Admin from './pages/admin';
 import Profile from './pages/profile';
 import Players from './pages/players';
 import Fixtures from './pages/fixtures';
@@ -27,8 +27,12 @@ const ProtectedRoute = ({ children }) => {
 // Admin Route Component
 const AdminRoute = ({ children }) => {
   const { user } = useAuth();
-  if (!user || user.role !== 'admin') {
-    return <Navigate to="/admin/login" />;
+  console.log('AdminRoute - Current user:', user); // Debug log
+  if (!user) {
+    return <Navigate to="/login" />;
+  }
+  if (user.role !== 'admin') {
+    return <Navigate to="/login" />;
   }
   return children;
 };
@@ -78,10 +82,10 @@ const App = () => {
 
               {/* Admin Routes */}
               <Route
-                path="/admin/dashboard"
+                path="/admin"
                 element={
                   <AdminRoute>
-                    <AdminDashboard />
+                    <Admin />
                   </AdminRoute>
                 }
               />

@@ -2,11 +2,37 @@ const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
 const admin = require('../middleware/admin');
+const multer = require('multer');
+const path = require('path');
 const Player = require('../models/Player');
 const Fixture = require('../models/Fixture');
 const StoreItem = require('../models/StoreItem');
 const News = require('../models/News');
 const User = require('../models/User');
+
+// Configure multer for file uploads
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, 'uploads/players')
+  },
+  filename: function (req, file, cb) {
+    cb(null, Date.now() + '-' + file.originalname)
+  }
+});
+
+const upload = multer({ 
+  storage: storage,
+  fileFilter: function (req, file, cb) {
+    const filetypes = /jpeg|jpg|png/;
+    const mimetype = filetypes.test(file.mimetype);
+    const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+
+    if (mimetype && extname) {
+      return cb(null, true);
+    }
+    cb(new Error('Only .png, .jpg and .jpeg format allowed!'));
+  }
+});
 
 // Players routes
 router.get('/players', auth, admin, async (req, res) => {
@@ -18,24 +44,31 @@ router.get('/players', auth, admin, async (req, res) => {
   }
 });
 
-router.post('/players', auth, admin, async (req, res) => {
-  const player = new Player({
-    name: req.body.name,
-    position: req.body.position,
-    number: req.body.number,
-    status: req.body.status,
-    stats: {
-      kills: 0,
-      aces: 0,
-      digs: 0,
-      blocks: 0
-    }
-  });
-
+router.post('/players', auth, admin, upload.single('image'), async (req, res) => {
   try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'Player image is required' });
+    }
+
+    const player = new Player({
+      name: req.body.name,
+      position: req.body.position,
+      number: req.body.number,
+      age: req.body.age,
+      nationality: req.body.nationality,
+      image: `/uploads/players/${req.file.filename}`,
+      stats: {
+        kills: 0,
+        aces: 0,
+        digs: 0,
+        blocks: 0
+      }
+    });
+
     const newPlayer = await player.save();
     res.status(201).json(newPlayer);
   } catch (error) {
+    console.error('Error adding player:', error);
     res.status(400).json({ message: error.message });
   }
 });

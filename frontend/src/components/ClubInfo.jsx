@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import Image from "../assets/mugherhis.jpg";
+import Image1 from "../assets/champions.jpg";
 
 const ClubInfo = () => {
   const [activeTab, setActiveTab] = useState('history');
@@ -13,10 +14,10 @@ const ClubInfo = () => {
 
   const achievements = [
     {
-      year: '2023',
-      title: 'National Championship',
-      description: 'Won the Ethiopian National Volleyball Championship',
-      image: 'https://images.unsplash.com/photo-1577223194256-276b4f3f1254?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80'
+      year: '2025',
+      title: 'Premier League Winner',
+      description: 'Won the Ethiopian National Volleyball League',
+      image: Image1
     },
     {
       year: '2022',

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import axios from 'axios'
 import { useAuth } from '../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
+import AddPlayer from '../components/AddPlayer'
 
 const Admin = () => {
   const [activeTab, setActiveTab] = useState('players')
@@ -56,7 +57,7 @@ const Admin = () => {
 
   useEffect(() => {
     // Check if user is admin
-    if (!user || !user.isAdmin) {
+    if (!user || user.role !== 'admin') {
       navigate('/login')
       return
     }
@@ -67,14 +68,14 @@ const Admin = () => {
     try {
       setLoading(true)
       setError(null)
-
       const token = localStorage.getItem('token')
+
       switch (activeTab) {
         case 'players':
-          const playersRes = await axios.get('http://localhost:3000/players', {
+          const response = await axios.get('http://localhost:3000/players', {
             headers: { Authorization: `Bearer ${token}` }
           })
-          setPlayers(playersRes.data)
+          setPlayers(response.data)
           break
         case 'fixtures':
           const fixturesRes = await axios.get('http://localhost:3000/fixtures', {
@@ -131,39 +132,16 @@ const Admin = () => {
     }
   }
 
-  const handleAddPlayer = async (e) => {
-    e.preventDefault()
-    try {
-      const token = localStorage.getItem('token')
-      await axios.post('http://localhost:3000/players', newPlayer, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      setNewPlayer({
-        name: '',
-        position: '',
-        number: '',
-        age: '',
-        nationality: '',
-        image: ''
-      })
-      fetchData()
-    } catch (err) {
-      setError('Error adding player')
-    }
-  }
-
-  const handleUpdatePlayer = async (id, playerData) => {
-    try {
-      const response = await axios.put(`http://localhost:3000/players/${id}`, playerData)
-      setPlayers(players.map(player => player._id === id ? response.data : player))
-    } catch (error) {
-      setError(error.response?.data?.message || 'Failed to update player')
-    }
+  const handlePlayerAdded = (newPlayer) => {
+    setPlayers([...players, newPlayer])
   }
 
   const handleDeletePlayer = async (id) => {
     try {
-      await axios.delete(`http://localhost:3000/players/${id}`)
+      const token = localStorage.getItem('token')
+      await axios.delete(`http://localhost:3000/players/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
       setPlayers(players.filter(player => player._id !== id))
     } catch (error) {
       setError(error.response?.data?.message || 'Failed to delete player')
@@ -276,45 +254,53 @@ const Admin = () => {
     switch (activeTab) {
       case 'players':
         return (
-          <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-              <h2 className="text-lg font-semibold text-gray-900">Players Management</h2>
-              <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                Add New Player
-              </button>
+          <div className="space-y-6">
+            <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+              <div className="px-6 py-4 border-b border-gray-200">
+                <h2 className="text-lg font-semibold text-gray-900">Add New Player</h2>
+              </div>
+              <div className="p-6">
+                <AddPlayer onPlayerAdded={handlePlayerAdded} />
+              </div>
             </div>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Position</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Number</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {players.map((player) => (
-                    <tr key={player._id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{player.name}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{player.position}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{player.number}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          player.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                        }`}>
-                          {player.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        <button className="text-blue-600 hover:text-blue-900 mr-3">Edit</button>
-                        <button className="text-red-600 hover:text-red-900">Delete</button>
-                      </td>
+
+            <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+              <div className="px-6 py-4 border-b border-gray-200">
+                <h2 className="text-lg font-semibold text-gray-900">Players List</h2>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Position</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Number</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Age</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nationality</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {players.map((player) => (
+                      <tr key={player._id}>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{player.name}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{player.position}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{player.number}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{player.age}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{player.nationality}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          <button 
+                            onClick={() => handleDeletePlayer(player._id)}
+                            className="text-red-600 hover:text-red-900"
+                          >
+                            Delete
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         )
@@ -410,108 +396,24 @@ const Admin = () => {
         )
 
       default:
-        return (
-          <>
-            {/* Stats Grid */}
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-              <div className="bg-white rounded-xl shadow-lg p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">Total Users</p>
-                    <p className="text-2xl font-bold text-gray-900">{stats.totalUsers}</p>
-                  </div>
-                  <div className="p-3 bg-blue-100 rounded-lg">
-                    <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-xl shadow-lg p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">Total Players</p>
-                    <p className="text-2xl font-bold text-gray-900">{stats.totalPlayers}</p>
-                  </div>
-                  <div className="p-3 bg-green-100 rounded-lg">
-                    <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-xl shadow-lg p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">Upcoming Fixtures</p>
-                    <p className="text-2xl font-bold text-gray-900">{stats.upcomingFixtures}</p>
-                  </div>
-                  <div className="p-3 bg-purple-100 rounded-lg">
-                    <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-xl shadow-lg p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">Store Items</p>
-                    <p className="text-2xl font-bold text-gray-900">{stats.storeItems}</p>
-                  </div>
-                  <div className="p-3 bg-yellow-100 rounded-lg">
-                    <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Quick Actions */}
-            <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <button className="p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors duration-200">
-                  <div className="text-blue-600 mb-2">
-                    <svg className="w-6 h-6 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                    </svg>
-                  </div>
-                  <span className="text-sm font-medium text-gray-900">Add Player</span>
-                </button>
-                <button className="p-4 bg-green-50 rounded-lg hover:bg-green-100 transition-colors duration-200">
-                  <div className="text-green-600 mb-2">
-                    <svg className="w-6 h-6 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                  </div>
-                  <span className="text-sm font-medium text-gray-900">Schedule Fixture</span>
-                </button>
-                <button className="p-4 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors duration-200">
-                  <div className="text-purple-600 mb-2">
-                    <svg className="w-6 h-6 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                    </svg>
-                  </div>
-                  <span className="text-sm font-medium text-gray-900">Add Store Item</span>
-                </button>
-                <button className="p-4 bg-yellow-50 rounded-lg hover:bg-yellow-100 transition-colors duration-200">
-                  <div className="text-yellow-600 mb-2">
-                    <svg className="w-6 h-6 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                  </div>
-                  <span className="text-sm font-medium text-gray-900">Post News</span>
-                </button>
-              </div>
-            </div>
-          </>
-        )
+        return null
     }
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="text-xl text-gray-600">Loading...</div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="text-xl text-red-600">{error}</div>
+      </div>
+    )
   }
 
   return (
@@ -555,13 +457,7 @@ const Admin = () => {
           </div>
         </div>
 
-        {loading ? (
-          <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-          </div>
-        ) : (
-          renderTabContent()
-        )}
+        {renderTabContent()}
       </div>
     </div>
   )

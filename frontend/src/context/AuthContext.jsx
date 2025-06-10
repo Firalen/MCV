@@ -15,6 +15,7 @@ export const AuthProvider = ({ children }) => {
     if (token && storedUser) {
       try {
         const userData = JSON.parse(storedUser);
+        console.log('Restored user data:', userData); // Debug log
         setUser(userData);
       } catch (error) {
         console.error('Error parsing stored user data:', error);
@@ -33,6 +34,12 @@ export const AuthProvider = ({ children }) => {
       });
 
       const { token, user: userData } = response.data;
+      console.log('Login response user data:', userData); // Debug log
+      
+      if (!userData || !userData.role) {
+        throw new Error('Invalid user data received from server');
+      }
+      
       localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(userData));
       setUser(userData);
@@ -44,25 +51,10 @@ export const AuthProvider = ({ children }) => {
   };
 
   const register = async (userData) => {
-    setUser(userData);
-  };
-
-  const adminLogin = async (email, password) => {
-    try {
-      const response = await axios.post('http://localhost:3000/admin/login', {
-        email,
-        password
-      });
-
-      const { token, user: userData } = response.data;
-      localStorage.setItem('token', token);
-      localStorage.setItem('user', JSON.stringify(userData));
-      setUser(userData);
-      return userData;
-    } catch (error) {
-      console.error('Admin login error:', error);
-      throw error;
+    if (!userData || !userData.role) {
+      throw new Error('Invalid user data');
     }
+    setUser(userData);
   };
 
   const logout = () => {
@@ -71,18 +63,12 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
-  const isAdmin = () => {
-    return user && user.role === 'admin';
-  };
-
   const value = {
     user,
     loading,
     login,
     register,
-    adminLogin,
-    logout,
-    isAdmin
+    logout
   };
 
   return (

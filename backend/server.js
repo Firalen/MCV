@@ -5,6 +5,11 @@ const dotenv = require("dotenv");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const dns = require('dns');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+const auth = require('./middleware/auth');
+const admin = require('./middleware/admin');
 
 // Load environment variables
 dotenv.config();
@@ -25,6 +30,41 @@ app.use(cors({
     credentials: true
 }));
 app.use(express.json());
+
+// Configure multer for file uploads
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, 'uploads/players')
+  },
+  filename: function (req, file, cb) {
+    cb(null, Date.now() + '-' + file.originalname)
+  }
+});
+
+const upload = multer({ 
+  storage: storage,
+  fileFilter: function (req, file, cb) {
+    const filetypes = /jpeg|jpg|png/;
+    const mimetype = filetypes.test(file.mimetype);
+    const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+
+    if (mimetype && extname) {
+      return cb(null, true);
+    }
+    cb(new Error('Only .png, .jpg and .jpeg format allowed!'));
+  }
+});
+
+// Create uploads directory if it doesn't exist
+if (!fs.existsSync('uploads')) {
+  fs.mkdirSync('uploads');
+}
+if (!fs.existsSync('uploads/players')) {
+  fs.mkdirSync('uploads/players');
+}
+
+// Serve static files from uploads directory
+app.use('/uploads', express.static('uploads'));
 
 // MongoDB connection with improved settings
 console.log("Setting up MongoDB connection...");
@@ -201,33 +241,6 @@ const newsSchema = new mongoose.Schema({
 });
 const News = mongoose.model('News', newsSchema);
 
-// ✅ Middleware to verify JWT
-function verifyToken(req, res, next) {
-    const token = req.headers.authorization?.split(" ")[1];
-    if (!token) return res.status(401).json({ message: "Access Denied" });
-
-    try {
-        const verified = jwt.verify(token, process.env.JWT_SECRET);
-        req.userId = verified.id;
-        next();
-    } catch (err) {
-        res.status(400).json({ message: "Invalid Token" });
-    }
-}
-
-// Admin middleware
-const admin = async (req, res, next) => {
-    try {
-        const user = await User.findById(req.userId);
-        if (!user.isAdmin) {
-            return res.status(403).json({ message: 'Access denied. Admin privileges required.' });
-        }
-        next();
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
-};
-
 // ✅ Register route
 app.post("/register", checkDatabaseConnection, async (req, res) => {
     console.log("Registration attempt received");
@@ -310,42 +323,30 @@ app.post("/register", checkDatabaseConnection, async (req, res) => {
     }
 });
 
-// Login Route
+// Login route
 app.post('/login', async (req, res) => {
-  console.log('\n=== Login Request ===');
-  console.log('Time:', new Date().toISOString());
-  console.log('Request body:', { ...req.body, password: '***' });
-  
   try {
     const { email, password } = req.body;
-
-    // Find user
     const user = await User.findOne({ email });
+    
     if (!user) {
-      console.log('User not found:', email);
-      return res.status(400).json({ message: 'Invalid email or password' });
+      return res.status(401).json({ message: 'Invalid email or password' });
     }
 
-    // Check password
-    const validPassword = await bcrypt.compare(password, user.password);
-    if (!validPassword) {
-      console.log('Invalid password for user:', email);
-      return res.status(400).json({ message: 'Invalid email or password' });
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ message: 'Invalid email or password' });
     }
 
     // Update last login
     user.lastLogin = new Date();
     await user.save();
 
-    // Generate token
     const token = jwt.sign(
       { userId: user._id, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: '24h' }
     );
-
-    console.log('Login successful for user:', email);
-    console.log('User role:', user.role);
 
     res.json({
       token,
@@ -358,14 +359,14 @@ app.post('/login', async (req, res) => {
     });
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({ message: 'Error during login' });
+    res.status(500).json({ message: error.message });
   }
 });
 
 // Profile route
-app.get('/profile', verifyToken, async (req, res) => {
+app.get('/profile', auth, async (req, res) => {
   try {
-    const user = await User.findById(req.userId).select('-password');
+    const user = await User.findById(req.user.userId).select('-password');
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
@@ -377,10 +378,10 @@ app.get('/profile', verifyToken, async (req, res) => {
 });
 
 // Update Profile route
-app.put("/profile", verifyToken, async (req, res) => {
+app.put("/profile", auth, async (req, res) => {
     try {
         const { name, email } = req.body;
-        const user = await User.findById(req.userId);
+        const user = await User.findById(req.user.userId);
         
         if (!user) {
             return res.status(404).json({ message: "User not found" });
@@ -398,7 +399,7 @@ app.put("/profile", verifyToken, async (req, res) => {
                 id: user._id,
                 name: user.name,
                 email: user.email,
-                role: user.role || "member",
+                role: user.role,
                 updatedAt: new Date()
             }
         });
@@ -410,7 +411,7 @@ app.put("/profile", verifyToken, async (req, res) => {
 
 // Admin Routes
 // Players routes
-app.get('/api/admin/players', verifyToken, admin, async (req, res) => {
+app.get('/api/admin/players', admin, async (req, res) => {
     try {
         const players = await Player.find().sort({ number: 1 });
         res.json(players);
@@ -419,25 +420,31 @@ app.get('/api/admin/players', verifyToken, admin, async (req, res) => {
     }
 });
 
-app.post('/api/admin/players', verifyToken, admin, async (req, res) => {
-    const player = new Player({
-        name: req.body.name,
-        position: req.body.position,
-        number: req.body.number,
-        age: req.body.age,
-        nationality: req.body.nationality,
-        image: req.body.image
-    });
-
+app.post('/api/admin/players', admin, upload.single('image'), async (req, res) => {
     try {
-        const newPlayer = await player.save();
-        res.status(201).json(newPlayer);
+        const player = new Player({
+            name: req.body.name,
+            position: req.body.position,
+            number: req.body.number,
+            age: req.body.age,
+            nationality: req.body.nationality,
+            image: req.file ? `/uploads/players/${req.file.filename}` : null,
+            stats: {
+                kills: 0,
+                aces: 0,
+                digs: 0,
+                blocks: 0
+            }
+        });
+
+        const savedPlayer = await player.save();
+        res.status(201).json(savedPlayer);
     } catch (error) {
-        res.status(400).json({ message: error.message });
+        res.status(500).json({ message: error.message });
     }
 });
 
-app.put('/api/admin/players/:id', verifyToken, admin, async (req, res) => {
+app.put('/api/admin/players/:id', admin, async (req, res) => {
     try {
         const player = await Player.findById(req.params.id);
         if (!player) return res.status(404).json({ message: 'Player not found' });
@@ -450,7 +457,7 @@ app.put('/api/admin/players/:id', verifyToken, admin, async (req, res) => {
     }
 });
 
-app.delete('/api/admin/players/:id', verifyToken, admin, async (req, res) => {
+app.delete('/api/admin/players/:id', admin, async (req, res) => {
     try {
         const player = await Player.findById(req.params.id);
         if (!player) return res.status(404).json({ message: 'Player not found' });
@@ -463,7 +470,7 @@ app.delete('/api/admin/players/:id', verifyToken, admin, async (req, res) => {
 });
 
 // Fixtures routes
-app.get('/api/admin/fixtures', verifyToken, admin, async (req, res) => {
+app.get('/api/admin/fixtures', admin, async (req, res) => {
     try {
         const fixtures = await Fixture.find().sort({ date: 1 });
         res.json(fixtures);
@@ -472,7 +479,7 @@ app.get('/api/admin/fixtures', verifyToken, admin, async (req, res) => {
     }
 });
 
-app.post('/api/admin/fixtures', verifyToken, admin, async (req, res) => {
+app.post('/api/admin/fixtures', admin, async (req, res) => {
     const fixture = new Fixture({
         opponent: req.body.opponent,
         date: req.body.date,
@@ -489,7 +496,7 @@ app.post('/api/admin/fixtures', verifyToken, admin, async (req, res) => {
     }
 });
 
-app.put('/api/admin/fixtures/:id', verifyToken, admin, async (req, res) => {
+app.put('/api/admin/fixtures/:id', admin, async (req, res) => {
     try {
         const fixture = await Fixture.findById(req.params.id);
         if (!fixture) return res.status(404).json({ message: 'Fixture not found' });
@@ -502,7 +509,7 @@ app.put('/api/admin/fixtures/:id', verifyToken, admin, async (req, res) => {
     }
 });
 
-app.delete('/api/admin/fixtures/:id', verifyToken, admin, async (req, res) => {
+app.delete('/api/admin/fixtures/:id', admin, async (req, res) => {
     try {
         const fixture = await Fixture.findById(req.params.id);
         if (!fixture) return res.status(404).json({ message: 'Fixture not found' });
@@ -515,7 +522,7 @@ app.delete('/api/admin/fixtures/:id', verifyToken, admin, async (req, res) => {
 });
 
 // Store routes
-app.get('/api/admin/store', verifyToken, admin, async (req, res) => {
+app.get('/api/admin/store', admin, async (req, res) => {
     try {
         const items = await StoreItem.find().sort({ name: 1 });
         res.json(items);
@@ -524,7 +531,7 @@ app.get('/api/admin/store', verifyToken, admin, async (req, res) => {
     }
 });
 
-app.post('/api/admin/store', verifyToken, admin, async (req, res) => {
+app.post('/api/admin/store', admin, async (req, res) => {
     const item = new StoreItem({
         name: req.body.name,
         price: req.body.price,
@@ -544,7 +551,7 @@ app.post('/api/admin/store', verifyToken, admin, async (req, res) => {
     }
 });
 
-app.put('/api/admin/store/:id', verifyToken, admin, async (req, res) => {
+app.put('/api/admin/store/:id', admin, async (req, res) => {
     try {
         const item = await StoreItem.findById(req.params.id);
         if (!item) return res.status(404).json({ message: 'Item not found' });
@@ -557,7 +564,7 @@ app.put('/api/admin/store/:id', verifyToken, admin, async (req, res) => {
     }
 });
 
-app.delete('/api/admin/store/:id', verifyToken, admin, async (req, res) => {
+app.delete('/api/admin/store/:id', admin, async (req, res) => {
     try {
         const item = await StoreItem.findById(req.params.id);
         if (!item) return res.status(404).json({ message: 'Item not found' });
@@ -570,7 +577,7 @@ app.delete('/api/admin/store/:id', verifyToken, admin, async (req, res) => {
 });
 
 // News routes
-app.get('/api/admin/news', verifyToken, admin, async (req, res) => {
+app.get('/api/admin/news', admin, async (req, res) => {
     try {
         const news = await News.find().sort({ date: -1 });
         res.json(news);
@@ -579,7 +586,7 @@ app.get('/api/admin/news', verifyToken, admin, async (req, res) => {
     }
 });
 
-app.post('/api/admin/news', verifyToken, admin, async (req, res) => {
+app.post('/api/admin/news', admin, async (req, res) => {
     const news = new News({
         title: req.body.title,
         content: req.body.content,
@@ -595,7 +602,7 @@ app.post('/api/admin/news', verifyToken, admin, async (req, res) => {
     }
 });
 
-app.put('/api/admin/news/:id', verifyToken, admin, async (req, res) => {
+app.put('/api/admin/news/:id', admin, async (req, res) => {
     try {
         const news = await News.findById(req.params.id);
         if (!news) return res.status(404).json({ message: 'News not found' });
@@ -608,7 +615,7 @@ app.put('/api/admin/news/:id', verifyToken, admin, async (req, res) => {
     }
 });
 
-app.delete('/api/admin/news/:id', verifyToken, admin, async (req, res) => {
+app.delete('/api/admin/news/:id', admin, async (req, res) => {
     try {
         const news = await News.findById(req.params.id);
         if (!news) return res.status(404).json({ message: 'News not found' });
@@ -621,7 +628,7 @@ app.delete('/api/admin/news/:id', verifyToken, admin, async (req, res) => {
 });
 
 // Users route for admin
-app.get('/api/admin/users', verifyToken, admin, async (req, res) => {
+app.get('/api/admin/users', admin, async (req, res) => {
     try {
         const users = await User.find().select('-password');
         res.json(users);
@@ -630,35 +637,35 @@ app.get('/api/admin/users', verifyToken, admin, async (req, res) => {
     }
 });
 
-// Admin middleware
-const isAdmin = async (req, res, next) => {
-  try {
-    const user = await User.findById(req.user.id);
-    if (user && user.role === 'admin') {
-      next();
-    } else {
-      res.status(403).json({ message: 'Access denied. Admin only.' });
-    }
-  } catch (error) {
-    res.status(500).json({ message: 'Server error' });
-  }
-};
-
 // Player routes
 app.get('/players', async (req, res) => {
   try {
-    const players = await Player.find();
+    const players = await Player.find().sort({ number: 1 });
     res.json(players);
   } catch (error) {
     res.status(500).json({ message: 'Error fetching players' });
   }
 });
 
-app.post('/players', verifyToken, isAdmin, async (req, res) => {
+app.post('/players', admin, upload.single('image'), async (req, res) => {
   try {
-    const player = new Player(req.body);
-    await player.save();
-    res.status(201).json(player);
+    const player = new Player({
+      name: req.body.name,
+      position: req.body.position,
+      number: req.body.number,
+      age: req.body.age,
+      nationality: req.body.nationality,
+      image: req.file ? `/uploads/players/${req.file.filename}` : null,
+      stats: {
+        kills: 0,
+        aces: 0,
+        digs: 0,
+        blocks: 0
+      }
+    });
+
+    const savedPlayer = await player.save();
+    res.status(201).json(savedPlayer);
   } catch (error) {
     res.status(500).json({ message: 'Error creating player' });
   }
@@ -674,7 +681,7 @@ app.get('/fixtures', async (req, res) => {
   }
 });
 
-app.post('/fixtures', verifyToken, isAdmin, async (req, res) => {
+app.post('/fixtures', admin, async (req, res) => {
   try {
     const fixture = new Fixture(req.body);
     await fixture.save();
@@ -694,7 +701,7 @@ app.get('/news', async (req, res) => {
   }
 });
 
-app.post('/news', verifyToken, isAdmin, async (req, res) => {
+app.post('/news', admin, async (req, res) => {
   try {
     const news = new News(req.body);
     await news.save();

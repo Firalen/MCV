@@ -1,11 +1,22 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import logo from '../assets/mug2.webp';
 
 const Nav = () => {
   const { user, logout } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const navigate = useNavigate();
+
+  const handleAdminClick = (e) => {
+    e.preventDefault();
+    console.log('Admin link clicked. Current user:', user); // Debug log
+    if (user && user.role === 'admin') {
+      navigate('/admin');
+    } else {
+      navigate('/login');
+    }
+  };
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -66,12 +77,12 @@ const Nav = () => {
                   <span>{user.name}</span>
                 </Link>
                 {user.role === 'admin' && (
-                  <Link
-                    to="/admin"
+                  <button
+                    onClick={handleAdminClick}
                     className="text-gray-200 hover:text-white px-3 py-2 rounded-md text-sm font-medium"
                   >
                     Admin
-                  </Link>
+                  </button>
                 )}
                 <button
                   onClick={logout}
@@ -130,7 +141,7 @@ const Nav = () => {
           </div>
         </div>
 
-        {/* Mobile Navigation */}
+        {/* Mobile menu */}
         {isMenuOpen && (
           <div className="md:hidden">
             <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
@@ -175,13 +186,15 @@ const Nav = () => {
                     <span>Profile</span>
                   </Link>
                   {user.role === 'admin' && (
-                    <Link
-                      to="/admin"
-                      className="text-gray-200 hover:text-white block px-3 py-2 rounded-md text-base font-medium"
-                      onClick={() => setIsMenuOpen(false)}
+                    <button
+                      onClick={(e) => {
+                        handleAdminClick(e);
+                        setIsMenuOpen(false);
+                      }}
+                      className="w-full text-left text-gray-200 hover:text-white block px-3 py-2 rounded-md text-base font-medium"
                     >
                       Admin
-                    </Link>
+                    </button>
                   )}
                   <button
                     onClick={() => {
