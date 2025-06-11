@@ -11,6 +11,7 @@ import Players from './pages/players';
 import Fixtures from './pages/fixtures';
 import News from './pages/news';
 import Fans from './pages/fans';
+import NewsDetail from './pages/NewsDetail';
 
 function App() {
   return (
@@ -28,6 +29,7 @@ function App() {
             <Route path="/fixtures" element={<Fixtures />} />
             <Route path="/news" element={<News />} />
             <Route path="/fans" element={<Fans />} />
+            <Route path="/news/:id" element={<NewsDetail />} />
           </Routes>
         </div>
       </Router>

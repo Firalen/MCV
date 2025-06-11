@@ -15,6 +15,7 @@ const Player = require('./models/Player');
 const Fixture = require('./models/Fixture');
 const StoreItem = require('./models/StoreItem');
 const News = require('./models/News');
+const League = require('./models/League');
 
 // Load environment variables
 dotenv.config();
@@ -31,8 +32,10 @@ console.log("JWT_SECRET exists:", !!process.env.JWT_SECRET);
 
 const app = express();
 app.use(cors({
-    origin: 'http://localhost:5173', // Frontend Vite default port
-    credentials: true
+    origin: ['http://localhost:5173', 'http://127.0.0.1:5173'], // Frontend Vite default ports
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json());
 
@@ -69,7 +72,9 @@ if (!fs.existsSync('uploads/players')) {
 }
 
 // Serve static files from uploads directory
-app.use('/uploads', express.static('uploads'));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads/players', express.static(path.join(__dirname, 'uploads/players')));
+app.use('/uploads/news', express.static(path.join(__dirname, 'uploads/news')));
 
 // MongoDB connection with improved settings
 console.log("Setting up MongoDB connection...");
@@ -162,7 +167,7 @@ const checkDatabaseConnection = (req, res, next) => {
 
 // Debug middleware
 app.use((req, res, next) => {
-    console.log(`${req.method} ${req.path}`);
+    console.log(`${req.method} ${req.path} - Headers:`, req.headers);
     next();
 });
 
@@ -173,14 +178,150 @@ const adminRoutes = require('./routes/admin');
 app.use('/api/admin', adminRoutes);
 
 // Public players endpoint
-app.get('/api/players', async (req, res) => {
+app.get('/api/players', checkDatabaseConnection, async (req, res) => {
   try {
+    console.log('Public players endpoint hit');
+    console.log('Database connection state:', mongoose.connection.readyState);
+    console.log('Is connected:', isConnected);
+
+    if (!mongoose.connection.readyState === 1) {
+      console.log('Database not ready, returning 503');
+      return res.status(503).json({ 
+        message: 'Database connection not ready',
+        state: mongoose.connection.readyState
+      });
+    }
+
+    console.log('Fetching players from database...');
     const players = await Player.find().sort({ number: 1 });
+    console.log(`Found ${players.length} players`);
+    
+    if (!players || players.length === 0) {
+      console.log('No players found in database');
+      return res.json([]);
+    }
+
+    console.log('Successfully retrieved players');
     res.json(players);
   } catch (error) {
-    console.error('Error fetching players:', error);
-    res.status(500).json({ message: error.message });
+    console.error('Error in /api/players endpoint:', error);
+    console.error('Error stack:', error.stack);
+    res.status(500).json({ 
+      message: 'Error fetching players',
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
+});
+
+// Public fixtures endpoint
+app.get('/api/fixtures', checkDatabaseConnection, async (req, res) => {
+  try {
+    console.log('Public fixtures endpoint hit');
+    console.log('Database connection state:', mongoose.connection.readyState);
+    console.log('Is connected:', isConnected);
+
+    if (!mongoose.connection.readyState === 1) {
+      console.log('Database not ready, returning 503');
+      return res.status(503).json({ 
+        message: 'Database connection not ready',
+        state: mongoose.connection.readyState
+      });
+    }
+
+    console.log('Fetching fixtures from database...');
+    const fixtures = await Fixture.find().sort({ date: 1 });
+    console.log(`Found ${fixtures.length} fixtures`);
+    
+    if (!fixtures || fixtures.length === 0) {
+      console.log('No fixtures found in database');
+      return res.json([]);
+    }
+
+    console.log('Successfully retrieved fixtures');
+    res.json(fixtures);
+  } catch (error) {
+    console.error('Error in /api/fixtures endpoint:', error);
+    console.error('Error stack:', error.stack);
+    res.status(500).json({ 
+      message: 'Error fetching fixtures',
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+});
+
+// Public news endpoint
+app.get('/api/news', checkDatabaseConnection, async (req, res) => {
+  try {
+    console.log('Public news endpoint hit');
+    console.log('Database connection state:', mongoose.connection.readyState);
+    console.log('Is connected:', isConnected);
+
+    if (!mongoose.connection.readyState === 1) {
+      console.log('Database not ready, returning 503');
+      return res.status(503).json({ 
+        message: 'Database connection not ready',
+        state: mongoose.connection.readyState
+      });
+    }
+
+    console.log('Fetching news from database...');
+    const news = await News.find().sort({ createdAt: -1 });
+    console.log(`Found ${news.length} news articles`);
+    
+    if (!news || news.length === 0) {
+      console.log('No news found in database');
+      return res.json([]);
+    }
+
+    console.log('Successfully retrieved news');
+    res.json(news);
+  } catch (error) {
+    console.error('Error in /api/news endpoint:', error);
+    console.error('Error stack:', error.stack);
+    res.status(500).json({ 
+      message: 'Error fetching news',
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+});
+
+// Public news detail endpoint
+app.get('/api/news/:id', checkDatabaseConnection, async (req, res) => {
+  try {
+    console.log('Fetching news article:', req.params.id);
+    const news = await News.findById(req.params.id);
+    
+    if (!news) {
+      return res.status(404).json({ message: 'News article not found' });
+    }
+
+    console.log('Found news article:', news.title);
+    res.json(news);
+  } catch (error) {
+    console.error('Error fetching news article:', error);
+    res.status(500).json({ message: 'Error fetching news article' });
+  }
+});
+
+// Public league endpoint
+app.get('/api/league', checkDatabaseConnection, async (req, res) => {
+  try {
+    console.log('Fetching league table...');
+    const leagueTable = await League.find().sort({ position: 1 });
+    console.log(`Found ${leagueTable.length} teams in the league table`);
+    res.json(leagueTable);
+  } catch (error) {
+    console.error('Error fetching league table:', error);
+    res.status(500).json({ message: 'Failed to fetch league table' });
+  }
+});
+
+// Add a test endpoint to verify server is working
+app.get('/api/test', (req, res) => {
+  res.json({ message: 'Server is working!' });
 });
 
 // ✅ Register route

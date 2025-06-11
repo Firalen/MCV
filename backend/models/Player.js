@@ -5,11 +5,17 @@ const playerSchema = new mongoose.Schema({
     type: String, 
     required: true 
   },
-  position: { 
-    type: String, 
-    required: true,
-    enum: ['Outside Hitter', 'Middle Blocker', 'Opposite Hitter', 'Setter', 'Libero', 'Defensive Specialist']
-  },
+  positions: [{
+    type: String,
+    enum: [
+      'Outside Hitter',
+      'Middle Blocker',
+      'Opposite Hitter',
+      'Setter',
+      'Libero',
+      'Defensive Specialist'
+    ]
+  }],
   number: { 
     type: Number, 
     required: true,
@@ -36,10 +42,8 @@ const playerSchema = new mongoose.Schema({
     digs: { type: Number, default: 0 },
     blocks: { type: Number, default: 0 }
   },
-  createdAt: { 
-    type: Date, 
-    default: Date.now 
-  }
+}, {
+  timestamps: true
 });
 
 module.exports = mongoose.model('Player', playerSchema); 

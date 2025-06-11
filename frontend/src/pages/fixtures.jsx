@@ -1,155 +1,174 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 
 const Fixtures = () => {
-  const [activeTab, setActiveTab] = useState('upcoming')
+  const [fixtures, setFixtures] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState('all');
+  const [retryCount, setRetryCount] = useState(0);
 
-  const fixtures = {
-    upcoming: [
-      {
-        id: 1,
-        date: "April 15, 2024",
-        time: "15:00",
-        homeTeam: "Mugher Volleyball Club",
-        awayTeam: "Addis United",
-        venue: "Mugher Stadium",
-        competition: "National Volleyball League"
-      },
-      {
-        id: 2,
-        date: "April 22, 2024",
-        time: "16:30",
-        homeTeam: "Ethio Stars",
-        awayTeam: "Mugher Volleyball Club",
-        venue: "Addis Ababa Stadium",
-        competition: "National Volleyball League"
-      },
-      {
-        id: 3,
-        date: "April 29, 2024",
-        time: "15:00",
-        homeTeam: "Mugher Volleyball Club",
-        awayTeam: "Dire Dawa United",
-        venue: "Mugher Stadium",
-        competition: "National Volleyball League"
+  const fetchFixtures = async () => {
+    try {
+      setLoading(true);
+      console.log('Fetching fixtures from:', 'http://localhost:3000/api/fixtures');
+      
+      const response = await axios.get('http://localhost:3000/api/fixtures', {
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        timeout: 5000
+      });
+
+      console.log('Fixtures response:', response.data);
+      
+      if (!response.data) {
+        throw new Error('No data received from server');
       }
-    ],
-    past: [
-      {
-        id: 4,
-        date: "April 1, 2024",
-        homeTeam: "Mugher Volleyball Club",
-        awayTeam: "Hawassa City",
-        score: "3-1",
-        venue: "Mugher Stadium",
-        competition: "National Volleyball League"
-      },
-      {
-        id: 5,
-        date: "March 25, 2024",
-        homeTeam: "Jimma Aba Jifar",
-        awayTeam: "Mugher Volleyball Club",
-        score: "2-3",
-        venue: "Jimma Stadium",
-        competition: "National Volleyball League"
+
+      setFixtures(response.data);
+      setError('');
+      setRetryCount(0);
+    } catch (error) {
+      console.error('Error fetching fixtures:', error);
+      console.error('Error details:', {
+        status: error.response?.status,
+        message: error.response?.data?.message,
+        data: error.response?.data,
+        error: error.message
+      });
+
+      let errorMessage = 'Failed to fetch fixtures. ';
+      
+      if (error.response) {
+        errorMessage += `Server responded with status ${error.response.status}: ${error.response.data?.message || error.message}`;
+      } else if (error.request) {
+        errorMessage += 'No response received from server. Please check if the backend is running.';
+      } else {
+        errorMessage += error.message;
       }
-    ]
-  }
+      
+      setError(errorMessage);
+      
+      if (retryCount < 3) {
+        console.log(`Retrying... Attempt ${retryCount + 1} of 3`);
+        setTimeout(() => {
+          setRetryCount(prev => prev + 1);
+        }, 2000);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchFixtures();
+  }, [retryCount]);
+
+  const filteredFixtures = selectedStatus === 'all'
+    ? fixtures
+    : fixtures.filter(fixture => fixture.status === selectedStatus);
+
+  const formatDate = (dateString) => {
+    const options = { 
+      weekday: 'long',
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    };
+    return new Date(dateString).toLocaleDateString('en-US', options);
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'Upcoming':
+        return 'bg-blue-100 text-blue-800';
+      case 'Live':
+        return 'bg-green-100 text-green-800';
+      case 'Completed':
+        return 'bg-gray-100 text-gray-800';
+      case 'Cancelled':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white pt-20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">Fixtures & Results</h1>
-          <p className="text-lg text-gray-600">Stay updated with our upcoming matches and past results</p>
-        </div>
+    <div className="container mx-auto px-4 py-8">
+      <h1 className="text-3xl font-bold mb-8">Fixtures</h1>
+      
+      {/* Status Filter */}
+      <div className="mb-8">
+        <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Status</label>
+        <select
+          value={selectedStatus}
+          onChange={(e) => setSelectedStatus(e.target.value)}
+          className="w-full md:w-64 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="all">All Status</option>
+          <option value="Upcoming">Upcoming</option>
+          <option value="Live">Live</option>
+          <option value="Completed">Completed</option>
+          <option value="Cancelled">Cancelled</option>
+        </select>
+      </div>
 
-        {/* Tabs */}
-        <div className="flex justify-center mb-8">
-          <div className="inline-flex rounded-lg bg-white p-1 shadow-md">
-            <button
-              onClick={() => setActiveTab('upcoming')}
-              className={`px-6 py-2 rounded-lg font-medium transition-colors duration-200 ${
-                activeTab === 'upcoming'
-                  ? 'bg-blue-600 text-white'
-                  : 'text-gray-600 hover:text-blue-600'
-              }`}
-            >
-              Upcoming Matches
-            </button>
-            <button
-              onClick={() => setActiveTab('past')}
-              className={`px-6 py-2 rounded-lg font-medium transition-colors duration-200 ${
-                activeTab === 'past'
-                  ? 'bg-blue-600 text-white'
-                  : 'text-gray-600 hover:text-blue-600'
-              }`}
-            >
-              Past Results
-            </button>
-          </div>
-        </div>
-
-        {/* Fixtures List */}
-        <div className="space-y-4">
-          {fixtures[activeTab].map((fixture) => (
-            <div
-              key={fixture.id}
-              className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow duration-300"
-            >
-              <div className="flex flex-col md:flex-row md:items-center justify-between">
-                <div className="flex-1 mb-4 md:mb-0">
-                  <div className="flex items-center space-x-2 text-sm text-gray-500 mb-2">
-                    <span>{fixture.competition}</span>
-                    <span>•</span>
-                    <span>{fixture.venue}</span>
-                  </div>
-                  <div className="flex items-center space-x-4">
-                    <div className="flex-1 text-right">
-                      <span className="font-semibold text-gray-900">{fixture.homeTeam}</span>
-                    </div>
-                    {activeTab === 'upcoming' ? (
-                      <div className="px-4 py-2 bg-blue-100 rounded-lg text-blue-600 font-medium">
-                        {fixture.time}
-                      </div>
-                    ) : (
-                      <div className="px-4 py-2 bg-gray-100 rounded-lg text-gray-900 font-medium">
-                        {fixture.score}
-                      </div>
-                    )}
-                    <div className="flex-1">
-                      <span className="font-semibold text-gray-900">{fixture.awayTeam}</span>
-                    </div>
-                  </div>
+      {loading ? (
+        <div className="text-center">Loading...</div>
+      ) : error ? (
+        <div className="text-red-500 text-center">{error}</div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredFixtures.map(fixture => (
+            <div key={fixture._id} className="bg-white rounded-lg shadow-md overflow-hidden">
+              <div className="p-6">
+                <div className="flex justify-between items-start mb-4">
+                  <h2 className="text-xl font-semibold">{fixture.opponent}</h2>
+                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(fixture.status)}`}>
+                    {fixture.status}
+                  </span>
                 </div>
-                <div className="flex items-center space-x-4">
-                  <button className="px-4 py-2 text-sm font-medium text-blue-600 hover:text-blue-800">
-                    Buy Tickets
-                  </button>
-                  <button className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800">
-                    Match Details
-                  </button>
+                
+                <div className="space-y-3">
+                  <p className="text-gray-600">
+                    <span className="font-medium">Date:</span> {formatDate(fixture.date)}
+                  </p>
+                  <p className="text-gray-600">
+                    <span className="font-medium">Venue:</span> {fixture.venue}
+                  </p>
+                  <p className="text-gray-600">
+                    <span className="font-medium">Competition:</span> {fixture.competition}
+                  </p>
+                  
+                  {(fixture.status === 'Live' || fixture.status === 'Completed') && (
+                    <div className="mt-4 pt-4 border-t">
+                      <h3 className="text-lg font-semibold mb-2">Score</h3>
+                      <div className="flex justify-between items-center">
+                        <div className="text-center">
+                          <span className="block text-sm text-gray-600">Our Team</span>
+                          <span className="text-2xl font-bold">{fixture.score.home}</span>
+                        </div>
+                        <span className="text-gray-400">vs</span>
+                        <div className="text-center">
+                          <span className="block text-sm text-gray-600">{fixture.opponent}</span>
+                          <span className="text-2xl font-bold">{fixture.score.away}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
           ))}
         </div>
-
-        {/* Calendar Download */}
-        <div className="mt-12 bg-white rounded-xl shadow-lg p-6 text-center">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Never Miss a Match</h2>
-          <p className="text-gray-600 mb-6">Download our fixture calendar to stay updated with all matches</p>
-          <button className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors duration-200">
-            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
-            Download Calendar
-          </button>
-        </div>
-      </div>
+      )}
     </div>
-  )
-}
+  );
+};
 
-export default Fixtures
+export default Fixtures;
 

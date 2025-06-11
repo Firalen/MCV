@@ -9,6 +9,8 @@ const Fixture = require('../models/Fixture');
 const StoreItem = require('../models/StoreItem');
 const News = require('../models/News');
 const User = require('../models/User');
+const fs = require('fs');
+const League = require('../models/League');
 
 // Admin stats endpoint
 router.get('/stats', auth, admin, async (req, res) => {
@@ -57,6 +59,34 @@ const upload = multer({
   }
 });
 
+// Configure multer for news image uploads
+const newsStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const dir = 'uploads/news';
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    cb(null, dir);
+  },
+  filename: function (req, file, cb) {
+    cb(null, Date.now() + '-' + file.originalname);
+  }
+});
+
+const newsUpload = multer({ 
+  storage: newsStorage,
+  fileFilter: function (req, file, cb) {
+    const filetypes = /jpeg|jpg|png/;
+    const mimetype = filetypes.test(file.mimetype);
+    const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+
+    if (mimetype && extname) {
+      return cb(null, true);
+    }
+    cb(new Error('Only .png, .jpg and .jpeg format allowed!'));
+  }
+});
+
 // Players routes
 router.get('/players', auth, admin, async (req, res) => {
   try {
@@ -69,26 +99,44 @@ router.get('/players', auth, admin, async (req, res) => {
 
 router.post('/players', auth, admin, upload.single('image'), async (req, res) => {
   try {
+    console.log('Received player data:', req.body); // Debug log
+
     if (!req.file) {
       return res.status(400).json({ message: 'Player image is required' });
     }
 
+    const stats = req.body.stats ? JSON.parse(req.body.stats) : {
+      kills: 0,
+      aces: 0,
+      digs: 0,
+      blocks: 0
+    };
+
+    // Get positions from request body
+    const positions = Array.isArray(req.body.positions) 
+      ? req.body.positions 
+      : [req.body.positions].filter(Boolean);
+
+    console.log('Processing positions:', positions); // Debug log
+
+    if (!positions || positions.length === 0) {
+      return res.status(400).json({ message: 'At least one position must be selected' });
+    }
+
     const player = new Player({
       name: req.body.name,
-      position: req.body.position,
+      positions: positions, // Changed from position to positions
       number: req.body.number,
       age: req.body.age,
       nationality: req.body.nationality,
       image: `/uploads/players/${req.file.filename}`,
-      stats: {
-        kills: 0,
-        aces: 0,
-        digs: 0,
-        blocks: 0
-      }
+      stats: stats
     });
 
+    console.log('Creating player with data:', player); // Debug log
+
     const newPlayer = await player.save();
+    console.log('Player created successfully:', newPlayer); // Debug log
     res.status(201).json(newPlayer);
   } catch (error) {
     console.error('Error adding player:', error);
@@ -96,16 +144,39 @@ router.post('/players', auth, admin, upload.single('image'), async (req, res) =>
   }
 });
 
-router.put('/players/:id', auth, admin, async (req, res) => {
+router.put('/players/:id', auth, admin, upload.single('image'), async (req, res) => {
   try {
+    const { name, number, age, positions, skills } = req.body;
     const player = await Player.findById(req.params.id);
-    if (!player) return res.status(404).json({ message: 'Player not found' });
 
-    Object.assign(player, req.body);
-    const updatedPlayer = await player.save();
-    res.json(updatedPlayer);
+    if (!player) {
+      return res.status(404).json({ message: 'Player not found' });
+    }
+
+    // Update player fields
+    player.name = name;
+    player.number = number;
+    player.age = age;
+    player.positions = JSON.parse(positions);
+    player.skills = JSON.parse(skills);
+
+    // Update image if a new one is uploaded
+    if (req.file) {
+      // Delete old image if it exists
+      if (player.image) {
+        const oldImagePath = path.join(__dirname, '..', player.image);
+        if (fs.existsSync(oldImagePath)) {
+          fs.unlinkSync(oldImagePath);
+        }
+      }
+      player.image = `uploads/players/${req.file.filename}`;
+    }
+
+    await player.save();
+    res.json(player);
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    console.error('Error updating player:', error);
+    res.status(500).json({ message: 'Error updating player', error: error.message });
   }
 });
 
@@ -132,44 +203,73 @@ router.get('/fixtures', auth, admin, async (req, res) => {
 });
 
 router.post('/fixtures', auth, admin, async (req, res) => {
-  const fixture = new Fixture({
-    opponent: req.body.opponent,
-    date: req.body.date,
-    venue: req.body.venue,
-    status: req.body.status,
-    score: req.body.score
-  });
-
   try {
-    const newFixture = await fixture.save();
-    res.status(201).json(newFixture);
+    const { opponent, date, venue, status, competition, score } = req.body;
+
+    // Validate required fields
+    if (!opponent || !date || !venue || !status || !competition) {
+      return res.status(400).json({ message: 'All fields are required' });
+    }
+
+    // Create new fixture
+    const fixture = new Fixture({
+      opponent,
+      date,
+      venue,
+      status,
+      competition,
+      score: score || { home: 0, away: 0 }
+    });
+
+    await fixture.save();
+    res.status(201).json(fixture);
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    console.error('Error creating fixture:', error);
+    res.status(500).json({ message: 'Error creating fixture', error: error.message });
   }
 });
 
 router.put('/fixtures/:id', auth, admin, async (req, res) => {
   try {
-    const fixture = await Fixture.findById(req.params.id);
-    if (!fixture) return res.status(404).json({ message: 'Fixture not found' });
+    const { opponent, date, venue, status, competition, score } = req.body;
 
-    Object.assign(fixture, req.body);
-    const updatedFixture = await fixture.save();
-    res.json(updatedFixture);
+    // Validate required fields
+    if (!opponent || !date || !venue || !status || !competition) {
+      return res.status(400).json({ message: 'All fields are required' });
+    }
+
+    const fixture = await Fixture.findById(req.params.id);
+    if (!fixture) {
+      return res.status(404).json({ message: 'Fixture not found' });
+    }
+
+    fixture.opponent = opponent;
+    fixture.date = date;
+    fixture.venue = venue;
+    fixture.status = status;
+    fixture.competition = competition;
+    fixture.score = score || { home: 0, away: 0 };
+
+    await fixture.save();
+    res.json(fixture);
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    console.error('Error updating fixture:', error);
+    res.status(500).json({ message: 'Error updating fixture', error: error.message });
   }
 });
 
 router.delete('/fixtures/:id', auth, admin, async (req, res) => {
   try {
     const fixture = await Fixture.findById(req.params.id);
-    if (!fixture) return res.status(404).json({ message: 'Fixture not found' });
+    if (!fixture) {
+      return res.status(404).json({ message: 'Fixture not found' });
+    }
 
-    await Fixture.deleteOne({ _id: req.params.id });
-    res.json({ message: 'Fixture deleted' });
+    await fixture.deleteOne();
+    res.json({ message: 'Fixture deleted successfully' });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('Error deleting fixture:', error);
+    res.status(500).json({ message: 'Error deleting fixture', error: error.message });
   }
 });
 
@@ -238,47 +338,89 @@ router.get('/news', auth, admin, async (req, res) => {
   }
 });
 
-router.post('/news', auth, admin, async (req, res) => {
-  const news = new News({
-    title: req.body.title,
-    content: req.body.content,
-    date: new Date(),
-    image: req.body.image,
-    author: req.user.id,
-    category: req.body.category,
-    tags: req.body.tags
-  });
-
+router.post('/news', auth, admin, newsUpload.single('image'), async (req, res) => {
   try {
+    console.log('Received news data:', req.body);
+    console.log('Received file:', req.file);
+
+    const { title, content, category } = req.body;
+
+    if (!title || !content) {
+      return res.status(400).json({ message: 'Title and content are required' });
+    }
+
+    const news = new News({
+      title,
+      content,
+      category: category || 'Other',
+      image: req.file ? `/uploads/news/${req.file.filename}` : undefined
+    });
+
+    console.log('Creating news with data:', news);
+
     const newNews = await news.save();
+    console.log('News created successfully:', newNews);
     res.status(201).json(newNews);
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    console.error('Error creating news:', error);
+    res.status(500).json({ message: 'Error creating news', error: error.message });
   }
 });
 
-router.put('/news/:id', auth, admin, async (req, res) => {
+router.put('/news/:id', auth, admin, newsUpload.single('image'), async (req, res) => {
   try {
+    const { title, content, category } = req.body;
     const news = await News.findById(req.params.id);
-    if (!news) return res.status(404).json({ message: 'News not found' });
 
-    Object.assign(news, req.body);
-    const updatedNews = await news.save();
-    res.json(updatedNews);
+    if (!news) {
+      return res.status(404).json({ message: 'News not found' });
+    }
+
+    // Update news fields
+    news.title = title;
+    news.content = content;
+    news.category = category;
+
+    // Update image if a new one is uploaded
+    if (req.file) {
+      // Delete old image if it exists
+      if (news.image) {
+        const oldImagePath = path.join(__dirname, '..', news.image);
+        if (fs.existsSync(oldImagePath)) {
+          fs.unlinkSync(oldImagePath);
+        }
+      }
+      news.image = `/uploads/news/${req.file.filename}`;
+    }
+
+    await news.save();
+    res.json(news);
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    console.error('Error updating news:', error);
+    res.status(500).json({ message: 'Error updating news', error: error.message });
   }
 });
 
 router.delete('/news/:id', auth, admin, async (req, res) => {
   try {
     const news = await News.findById(req.params.id);
-    if (!news) return res.status(404).json({ message: 'News not found' });
+    if (!news) {
+      return res.status(404).json({ message: 'News not found' });
+    }
+
+    // Delete image if it exists
+    if (news.image) {
+      const imagePath = path.join(__dirname, '..', news.image);
+      if (fs.existsSync(imagePath)) {
+        fs.unlinkSync(imagePath);
+      }
+    }
 
     await News.deleteOne({ _id: req.params.id });
-    res.json({ message: 'News deleted' });
+    res.json({ message: 'News deleted successfully' });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('Error deleting news:', error);
+    res.status(500).json({ message: 'Error deleting news', error: error.message });
   }
 });
 
@@ -289,6 +431,79 @@ router.get('/users', auth, admin, async (req, res) => {
     res.json(users);
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+});
+
+// League Table Routes
+router.post('/league', auth, async (req, res) => {
+  try {
+    const { teamName, played, wins, losses, points, position } = req.body;
+    
+    if (!teamName || position === undefined) {
+      return res.status(400).json({ message: 'Team name and position are required' });
+    }
+
+    const leagueEntry = new League({
+      teamName,
+      played: played || 0,
+      wins: wins || 0,
+      losses: losses || 0,
+      points: points || 0,
+      position
+    });
+
+    await leagueEntry.save();
+    res.status(201).json(leagueEntry);
+  } catch (error) {
+    console.error('Error creating league entry:', error);
+    res.status(500).json({ message: 'Error creating league entry' });
+  }
+});
+
+router.put('/league/:id', auth, async (req, res) => {
+  try {
+    const { teamName, played, wins, losses, points, position } = req.body;
+    
+    if (!teamName || position === undefined) {
+      return res.status(400).json({ message: 'Team name and position are required' });
+    }
+
+    const leagueEntry = await League.findByIdAndUpdate(
+      req.params.id,
+      {
+        teamName,
+        played: played || 0,
+        wins: wins || 0,
+        losses: losses || 0,
+        points: points || 0,
+        position
+      },
+      { new: true }
+    );
+
+    if (!leagueEntry) {
+      return res.status(404).json({ message: 'League entry not found' });
+    }
+
+    res.json(leagueEntry);
+  } catch (error) {
+    console.error('Error updating league entry:', error);
+    res.status(500).json({ message: 'Error updating league entry' });
+  }
+});
+
+router.delete('/league/:id', auth, async (req, res) => {
+  try {
+    const leagueEntry = await League.findByIdAndDelete(req.params.id);
+    
+    if (!leagueEntry) {
+      return res.status(404).json({ message: 'League entry not found' });
+    }
+
+    res.json({ message: 'League entry deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting league entry:', error);
+    res.status(500).json({ message: 'Error deleting league entry' });
   }
 });
 
