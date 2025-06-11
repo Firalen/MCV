@@ -435,7 +435,17 @@ router.get('/users', auth, admin, async (req, res) => {
 });
 
 // League Table Routes
-router.post('/league', auth, async (req, res) => {
+router.get('/league', auth, admin, async (req, res) => {
+  try {
+    const leagueTable = await League.find().sort({ position: 1 });
+    res.json(leagueTable);
+  } catch (error) {
+    console.error('Error fetching league table:', error);
+    res.status(500).json({ message: 'Error fetching league table' });
+  }
+});
+
+router.post('/league', auth, admin, async (req, res) => {
   try {
     const { teamName, played, wins, losses, points, position } = req.body;
     
@@ -460,7 +470,7 @@ router.post('/league', auth, async (req, res) => {
   }
 });
 
-router.put('/league/:id', auth, async (req, res) => {
+router.put('/league/:id', auth, admin, async (req, res) => {
   try {
     const { teamName, played, wins, losses, points, position } = req.body;
     
@@ -492,7 +502,7 @@ router.put('/league/:id', auth, async (req, res) => {
   }
 });
 
-router.delete('/league/:id', auth, async (req, res) => {
+router.delete('/league/:id', auth, admin, async (req, res) => {
   try {
     const leagueEntry = await League.findByIdAndDelete(req.params.id);
     
