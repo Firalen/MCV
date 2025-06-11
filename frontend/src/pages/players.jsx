@@ -11,7 +11,7 @@ const Players = () => {
     const fetchPlayers = async () => {
       try {
         setLoading(true);
-        const response = await axios.get('http://localhost:3000/api/admin/players');
+        const response = await axios.get('http://localhost:3000/api/players');
         console.log('Players response:', response.data);
         setPlayers(response.data);
         setError('');
@@ -80,9 +80,13 @@ const Players = () => {
             <div key={player._id} className="bg-white rounded-lg shadow-md overflow-hidden transform transition-transform duration-200 hover:scale-105">
               <div className="relative">
                 <img 
-                  src={player.image || 'https://via.placeholder.com/300x400'} 
+                  src={player.image ? `http://localhost:3000${player.image}` : 'https://via.placeholder.com/300x400?text=No+Image'} 
                   alt={player.name}
                   className="w-full h-64 object-cover"
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src = 'https://via.placeholder.com/300x400?text=No+Image';
+                  }}
                 />
                 <div className="absolute top-4 right-4 bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-bold">
                   #{player.number}
@@ -91,9 +95,19 @@ const Players = () => {
               <div className="p-6">
                 <h2 className="text-xl font-semibold text-gray-900 mb-2">{player.name}</h2>
                 <div className="space-y-2">
-                  <p className="text-gray-600">
-                    <span className="font-medium">Position:</span> {player.position}
-                  </p>
+                  <div className="text-gray-600">
+                    {Array.isArray(player.positions) ? (
+                      player.positions.map((position, index) => (
+                        <span key={index} className="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm mr-2 mb-2">
+                          {position}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm">
+                        {player.position}
+                      </span>
+                    )}
+                  </div>
                   <p className="text-gray-600">
                     <span className="font-medium">Age:</span> {player.age}
                   </p>

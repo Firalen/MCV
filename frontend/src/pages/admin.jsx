@@ -263,7 +263,15 @@ const Admin = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {players.map(player => (
                   <div key={player._id} className="bg-white p-4 rounded-lg shadow">
-                    <img src={player.image} alt={player.name} className="w-full h-48 object-cover rounded-lg mb-4" />
+                    <img 
+                      src={`http://localhost:3000${player.image}`} 
+                      alt={player.name} 
+                      className="w-full h-48 object-cover rounded-lg mb-4"
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = 'https://via.placeholder.com/300x400?text=No+Image';
+                      }}
+                    />
                     <h4 className="text-lg font-semibold">{player.name}</h4>
                     <div className="text-gray-600">
                       {Array.isArray(player.positions) ? (

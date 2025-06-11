@@ -172,6 +172,17 @@ const adminRoutes = require('./routes/admin');
 // Mount admin routes
 app.use('/api/admin', adminRoutes);
 
+// Public players endpoint
+app.get('/api/players', async (req, res) => {
+  try {
+    const players = await Player.find().sort({ number: 1 });
+    res.json(players);
+  } catch (error) {
+    console.error('Error fetching players:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // ✅ Register route
 app.post("/register", checkDatabaseConnection, async (req, res) => {
     console.log("Registration attempt received");

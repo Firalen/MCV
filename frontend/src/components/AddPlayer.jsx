@@ -9,7 +9,8 @@ const AddPlayer = ({ onPlayerAdded }) => {
     number: '',
     age: '',
     nationality: '',
-    image: null
+    image: null,
+    imagePreview: null
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -56,10 +57,15 @@ const AddPlayer = ({ onPlayerAdded }) => {
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
-    setFormData(prev => ({
-      ...prev,
-      image: file
-    }));
+    if (file) {
+      // Create a preview URL for the image
+      const imageUrl = URL.createObjectURL(file);
+      setFormData(prev => ({
+        ...prev,
+        image: file,
+        imagePreview: imageUrl
+      }));
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -109,7 +115,8 @@ const AddPlayer = ({ onPlayerAdded }) => {
           number: '',
           age: '',
           nationality: '',
-          image: null
+          image: null,
+          imagePreview: null
         });
         setError('');
       }
@@ -230,6 +237,15 @@ const AddPlayer = ({ onPlayerAdded }) => {
             required
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
+          {formData.imagePreview && (
+            <div className="mt-2">
+              <img
+                src={formData.imagePreview}
+                alt="Preview"
+                className="w-32 h-32 object-cover rounded-lg"
+              />
+            </div>
+          )}
         </div>
 
         <button
