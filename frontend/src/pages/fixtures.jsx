@@ -122,45 +122,82 @@ const Fixtures = () => {
       ) : error ? (
         <div className="text-red-500 text-center">{error}</div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {filteredFixtures.map(fixture => (
-            <div key={fixture._id} className="bg-white rounded-lg shadow-md overflow-hidden">
-              <div className="p-6">
-                <div className="flex justify-between items-start mb-4">
-                  <h2 className="text-xl font-semibold">{fixture.opponent}</h2>
-                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(fixture.status)}`}>
-                    {fixture.status}
-                  </span>
+            <div key={fixture._id} className="bg-white rounded-lg shadow-lg overflow-hidden transform transition-transform duration-300 hover:scale-105">
+              <div className="bg-blue-600 text-white p-4">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm font-medium">{fixture.competition}</span>
+                  <span className="text-sm font-medium">{fixture.season}</span>
                 </div>
-                
-                <div className="space-y-3">
-                  <p className="text-gray-600">
-                    <span className="font-medium">Date:</span> {formatDate(fixture.date)}
-                  </p>
-                  <p className="text-gray-600">
-                    <span className="font-medium">Venue:</span> {fixture.venue}
-                  </p>
-                  <p className="text-gray-600">
-                    <span className="font-medium">Competition:</span> {fixture.competition}
-                  </p>
+                <h3 className="text-xl font-bold text-center">
+                  Mugher vs {fixture.opponent}
+                </h3>
+              </div>
+              
+              <div className="p-6">
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <p className="text-sm text-gray-500">Date</p>
+                    <p className="font-semibold text-gray-800">
+                      {new Date(fixture.date).toLocaleDateString('en-US', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      })}
+                    </p>
+                  </div>
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <p className="text-sm text-gray-500">Time</p>
+                    <p className="font-semibold text-gray-800">
+                      {new Date(fixture.date).toLocaleTimeString('en-US', {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <p className="text-sm text-gray-500">Venue</p>
+                    <p className="font-semibold text-gray-800">{fixture.venue}</p>
+                  </div>
                   
-                  {(fixture.status === 'Live' || fixture.status === 'Completed') && (
-                    <div className="mt-4 pt-4 border-t">
-                      <h3 className="text-lg font-semibold mb-2">Score</h3>
-                      <div className="flex justify-between items-center">
-                        <div className="text-center">
-                          <span className="block text-sm text-gray-600">Our Team</span>
-                          <span className="text-2xl font-bold">{fixture.score.home}</span>
-                        </div>
-                        <span className="text-gray-400">vs</span>
-                        <div className="text-center">
-                          <span className="block text-sm text-gray-600">{fixture.opponent}</span>
-                          <span className="text-2xl font-bold">{fixture.score.away}</span>
-                        </div>
-                      </div>
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <p className="text-sm text-gray-500">Status</p>
+                    <div className="flex items-center mt-1">
+                      <span className={`inline-block w-3 h-3 rounded-full mr-2 ${
+                        fixture.status === 'upcoming' ? 'bg-green-500' :
+                        fixture.status === 'live' ? 'bg-red-500 animate-pulse' :
+                        'bg-gray-500'
+                      }`}></span>
+                      <p className="font-semibold text-gray-800 capitalize">{fixture.status}</p>
+                    </div>
+                  </div>
+
+                  {fixture.result && (
+                    <div className="bg-gray-50 p-3 rounded-lg">
+                      <p className="text-sm text-gray-500">Result</p>
+                      <p className="font-semibold text-gray-800">{fixture.result}</p>
                     </div>
                   )}
                 </div>
+
+                {fixture.status === 'upcoming' && (
+                  <div className="mt-6">
+                    <button
+                      onClick={() => handleAddToCalendar(fixture)}
+                      className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center justify-center"
+                    >
+                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      Add to Calendar
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           ))}

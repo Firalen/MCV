@@ -45,10 +45,10 @@ const Home = () => {
               Excellence in Sports, Powered by Partnership
             </p>
             <div className="flex justify-center space-x-4">
-              <button className="bg-[#E31837] text-white px-8 py-3 rounded-full hover:bg-[#C41530] transition-colors duration-200">
+              <button className="bg-[#E31837] text-white px-8 py-3 rounded-full hover:bg-[#C41530] transition-colors duration-200" onClick={()=>navigate('/players')}>
                 Join Our Team
               </button>
-              <button className="border-2 border-white px-8 py-3 rounded-full hover:bg-white hover:text-[#1B365D] transition-colors duration-200">
+              <button className="border-2 border-white px-8 py-3 rounded-full hover:bg-white hover:text-[#1B365D] transition-colors duration-200" onClick={()=>navigate('/fixtures')}>
                 Watch Matches
               </button>
             </div>

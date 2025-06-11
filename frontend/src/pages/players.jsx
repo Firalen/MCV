@@ -108,10 +108,10 @@ const Players = () => {
       ) : error ? (
         <div className="text-red-500 text-center">{error}</div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {filteredPlayers.map(player => (
-            <div key={player._id} className="bg-white rounded-lg shadow-md overflow-hidden">
-              <div className="relative h-64">
+            <div key={player._id} className="bg-white rounded-lg shadow-lg overflow-hidden transform transition-transform duration-300 hover:scale-105">
+              <div className="relative h-72">
                 <img
                   src={`http://localhost:3000${player.image}`}
                   alt={player.name}
@@ -122,45 +122,56 @@ const Players = () => {
                     e.target.src = 'https://via.placeholder.com/300x400?text=No+Image';
                   }}
                 />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                <div className="absolute bottom-0 left-0 right-0 p-4">
+                  <h2 className="text-2xl font-bold text-white mb-1">{player.name}</h2>
+                  <p className="text-white/90">#{player.number}</p>
+                </div>
               </div>
-              <div className="p-4">
-                <h2 className="text-xl font-semibold mb-2">{player.name}</h2>
-                <p className="text-gray-600 mb-2">#{player.number}</p>
-                <div className="mb-2">
-                  <span className="text-gray-600">Positions: </span>
-                  <div className="flex flex-wrap gap-1 mt-1">
+              <div className="p-6">
+                <div className="mb-4">
+                  <span className="text-gray-600 font-medium">Positions: </span>
+                  <div className="flex flex-wrap gap-2 mt-2">
                     {player.positions.map(position => (
                       <span
                         key={position}
-                        className="inline-block bg-blue-100 text-blue-800 text-sm px-2 py-1 rounded"
+                        className="inline-block bg-blue-100 text-blue-800 text-sm px-3 py-1 rounded-full"
                       >
                         {position}
                       </span>
                     ))}
                   </div>
                 </div>
-                <p className="text-gray-600 mb-2">Age: {player.age}</p>
-                <p className="text-gray-600">Nationality: {player.nationality}</p>
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <p className="text-sm text-gray-500">Age</p>
+                    <p className="font-semibold text-gray-800">{player.age}</p>
+                  </div>
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <p className="text-sm text-gray-500">Nationality</p>
+                    <p className="font-semibold text-gray-800">{player.nationality}</p>
+                  </div>
+                </div>
                 
                 {/* Stats Section */}
                 <div className="mt-4 pt-4 border-t">
-                  <h3 className="text-lg font-semibold mb-2">Statistics</h3>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <span className="text-gray-600">Kills:</span>
-                      <span className="ml-2 font-medium">{player.stats.kills}</span>
+                  <h3 className="text-lg font-semibold mb-3 text-gray-800">Statistics</h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-gray-50 p-3 rounded-lg">
+                      <p className="text-sm text-gray-500">Kills</p>
+                      <p className="font-semibold text-gray-800">{player.stats.kills}</p>
                     </div>
-                    <div>
-                      <span className="text-gray-600">Aces:</span>
-                      <span className="ml-2 font-medium">{player.stats.aces}</span>
+                    <div className="bg-gray-50 p-3 rounded-lg">
+                      <p className="text-sm text-gray-500">Aces</p>
+                      <p className="font-semibold text-gray-800">{player.stats.aces}</p>
                     </div>
-                    <div>
-                      <span className="text-gray-600">Digs:</span>
-                      <span className="ml-2 font-medium">{player.stats.digs}</span>
+                    <div className="bg-gray-50 p-3 rounded-lg">
+                      <p className="text-sm text-gray-500">Digs</p>
+                      <p className="font-semibold text-gray-800">{player.stats.digs}</p>
                     </div>
-                    <div>
-                      <span className="text-gray-600">Blocks:</span>
-                      <span className="ml-2 font-medium">{player.stats.blocks}</span>
+                    <div className="bg-gray-50 p-3 rounded-lg">
+                      <p className="text-sm text-gray-500">Blocks</p>
+                      <p className="font-semibold text-gray-800">{player.stats.blocks}</p>
                     </div>
                   </div>
                 </div>
@@ -174,4 +185,6 @@ const Players = () => {
 };
 
 export default Players;
+
+
 

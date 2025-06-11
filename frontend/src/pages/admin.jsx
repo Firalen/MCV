@@ -65,9 +65,7 @@ const Admin = () => {
     { id: 'dashboard', name: 'Dashboard' },
     { id: 'players', name: 'Players' },
     { id: 'fixtures', name: 'Fixtures' },
-    { id: 'store', name: 'Store' },
     { id: 'news', name: 'News' },
-    { id: 'users', name: 'Users' },
     { id: 'league', name: 'League' }
   ]
 
