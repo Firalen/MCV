@@ -159,20 +159,7 @@ const Home = () => {
         </div>
       </div>
 
-      {/* Join Us Section */}
-      <div className="bg-gray-900 py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <h2 className="text-3xl font-bold text-white mb-4">Join Our Team</h2>
-            <p className="text-xl text-gray-300 mb-8">
-              Whether you're a beginner or an experienced player, we have a place for you in our club.
-            </p>
-            <button className="bg-blue-600 text-white px-8 py-3 rounded-md text-lg font-semibold hover:bg-blue-700">
-              Get Started
-            </button>
-          </div>
-        </div>
-      </div>
+   
 
       {/* Footer */}
       <footer className="bg-gray-800 text-white mt-12">
