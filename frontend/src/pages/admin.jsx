@@ -488,45 +488,45 @@ const Admin = () => {
         return (
           <div>
             <AddPlayer onPlayerAdded={handlePlayerAdded} />
-            <div className="mt-8">
-              <h3 className="text-xl font-semibold mb-4">Current Players</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="mt-4 sm:mt-8">
+              <h3 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">Current Players</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                 {players.map((player) => (
-                  <div key={player._id} className="bg-white p-4 rounded-lg shadow">
+                  <div key={player._id} className="bg-white p-3 sm:p-4 rounded-lg shadow">
                     <img 
                       src={`http://localhost:3000${player.image}`} 
                       alt={player.name} 
-                      className="w-full h-48 object-cover rounded-lg mb-4"
+                      className="w-full h-32 sm:h-48 object-cover rounded-lg mb-3 sm:mb-4"
                       onError={(e) => {
                         e.target.onerror = null;
                         e.target.src = 'https://via.placeholder.com/300x400?text=No+Image';
                       }}
                     />
-                    <h4 className="text-lg font-semibold">{player.name}</h4>
-                    <div className="text-gray-600">
+                    <h4 className="text-base sm:text-lg font-semibold">{player.name}</h4>
+                    <div className="text-gray-600 text-sm">
                       {Array.isArray(player.positions) ? (
                         player.positions.map((position, index) => (
-                          <span key={index} className="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm mr-2 mb-2">
+                          <span key={index} className="inline-block bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full text-xs mr-1 mb-1">
                             {position}
                           </span>
                         ))
                       ) : (
-                        <span className="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm">
+                        <span className="inline-block bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full text-xs">
                           {player.position}
                         </span>
                       )}
                     </div>
-                    <p className="text-gray-600">#{player.number}</p>
-                    <div className="mt-4 flex justify-end space-x-2">
+                    <p className="text-gray-600 text-sm">#{player.number}</p>
+                    <div className="mt-3 sm:mt-4 flex justify-end space-x-2">
                       <button
                         onClick={() => handleEditPlayer(player)}
-                        className="bg-indigo-500 text-white px-3 py-1 rounded hover:bg-indigo-600"
+                        className="bg-indigo-500 text-white px-2 sm:px-3 py-1 rounded text-sm hover:bg-indigo-600"
                       >
                         Edit
                       </button>
                       <button
                         onClick={() => handleDeletePlayer(player._id)}
-                        className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
+                        className="bg-red-500 text-white px-2 sm:px-3 py-1 rounded text-sm hover:bg-red-600"
                       >
                         Delete
                       </button>
@@ -541,10 +541,10 @@ const Admin = () => {
         return (
           <div>
             <AddFixture />
-            <div className="mt-8">
-              <h3 className="text-xl font-semibold mb-4">Upcoming Fixtures</h3>
+            <div className="mt-4 sm:mt-8">
+              <h3 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">Upcoming Fixtures</h3>
               {error && (
-                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+                <div className="bg-red-100 border border-red-400 text-red-700 px-3 py-2 rounded mb-3 sm:mb-4 text-sm">
                   {error}
                 </div>
               )}
@@ -552,27 +552,27 @@ const Admin = () => {
                 <div className="text-center">Loading fixtures...</div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
+                  <table className="min-w-full divide-y divide-gray-200 text-sm sm:text-base">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Opponent</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Venue</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Competition</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Score</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        <th className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Opponent</th>
+                        <th className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                        <th className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Venue</th>
+                        <th className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Competition</th>
+                        <th className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Score</th>
+                        <th className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {fixtures.map((fixture) => (
                         <tr key={fixture._id}>
-                          <td className="px-6 py-4 whitespace-nowrap">{fixture.opponent}</td>
-                          <td className="px-6 py-4 whitespace-nowrap">
+                          <td className="px-3 sm:px-6 py-2 sm:py-4 whitespace-nowrap">{fixture.opponent}</td>
+                          <td className="px-3 sm:px-6 py-2 sm:py-4 whitespace-nowrap">
                             {new Date(fixture.date).toLocaleDateString()}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">{fixture.venue}</td>
-                          <td className="px-6 py-4 whitespace-nowrap">
+                          <td className="px-3 sm:px-6 py-2 sm:py-4 whitespace-nowrap">{fixture.venue}</td>
+                          <td className="px-3 sm:px-6 py-2 sm:py-4 whitespace-nowrap">
                             <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                               fixture.status === 'upcoming' ? 'bg-green-100 text-green-800' :
                               fixture.status === 'completed' ? 'bg-blue-100 text-blue-800' :
@@ -581,14 +581,14 @@ const Admin = () => {
                               {fixture.status}
                             </span>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">{fixture.competition}</td>
-                          <td className="px-6 py-4 whitespace-nowrap">
+                          <td className="px-3 sm:px-6 py-2 sm:py-4 whitespace-nowrap">{fixture.competition}</td>
+                          <td className="px-3 sm:px-6 py-2 sm:py-4 whitespace-nowrap">
                             {fixture.score ? `${fixture.score.home} - ${fixture.score.away}` : 'TBD'}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <td className="px-3 sm:px-6 py-2 sm:py-4 whitespace-nowrap text-sm font-medium">
                             <button
                               onClick={() => handleEditFixture(fixture)}
-                              className="text-indigo-600 hover:text-indigo-900 mr-4"
+                              className="text-indigo-600 hover:text-indigo-900 mr-2 sm:mr-4"
                             >
                               Edit
                             </button>
@@ -913,22 +913,22 @@ const Admin = () => {
       case 'dashboard':
       default:
         return (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-white p-6 rounded-lg shadow">
-              <h3 className="text-lg font-semibold text-gray-800">Total Users</h3>
-              <p className="text-3xl font-bold text-blue-600">{stats.totalUsers}</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <div className="bg-white p-4 sm:p-6 rounded-lg shadow">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-800">Total Users</h3>
+              <p className="text-2xl sm:text-3xl font-bold text-blue-600">{stats.totalUsers}</p>
             </div>
-            <div className="bg-white p-6 rounded-lg shadow">
-              <h3 className="text-lg font-semibold text-gray-800">Total Players</h3>
-              <p className="text-3xl font-bold text-blue-600">{stats.totalPlayers}</p>
+            <div className="bg-white p-4 sm:p-6 rounded-lg shadow">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-800">Total Players</h3>
+              <p className="text-2xl sm:text-3xl font-bold text-blue-600">{stats.totalPlayers}</p>
             </div>
-            <div className="bg-white p-6 rounded-lg shadow">
-              <h3 className="text-lg font-semibold text-gray-800">Upcoming Fixtures</h3>
-              <p className="text-3xl font-bold text-blue-600">{stats.upcomingFixtures}</p>
+            <div className="bg-white p-4 sm:p-6 rounded-lg shadow">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-800">Upcoming Fixtures</h3>
+              <p className="text-2xl sm:text-3xl font-bold text-blue-600">{stats.upcomingFixtures}</p>
             </div>
-            <div className="bg-white p-6 rounded-lg shadow">
-              <h3 className="text-lg font-semibold text-gray-800">News Articles</h3>
-              <p className="text-3xl font-bold text-blue-600">{stats.totalNews}</p>
+            <div className="bg-white p-4 sm:p-6 rounded-lg shadow">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-800">News Articles</h3>
+              <p className="text-2xl sm:text-3xl font-bold text-blue-600">{stats.totalNews}</p>
             </div>
           </div>
         )
@@ -944,22 +944,22 @@ const Admin = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-8">Admin Dashboard</h1>
+    <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-8">
+      <h1 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-8">Admin Dashboard</h1>
       
       {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+        <div className="bg-red-100 border border-red-400 text-red-700 px-3 py-2 sm:px-4 sm:py-3 rounded mb-4 text-sm sm:text-base">
           {error}
         </div>
       )}
 
-      <div className="bg-white rounded-lg shadow-md mb-8">
-        <div className="flex border-b">
+      <div className="bg-white rounded-lg shadow-md mb-4 sm:mb-8 overflow-x-auto">
+        <div className="flex border-b min-w-max">
           {tabs.map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`px-6 py-3 font-medium ${
+              className={`px-3 sm:px-6 py-2 sm:py-3 text-sm sm:text-base font-medium whitespace-nowrap ${
                 activeTab === tab.id
                   ? 'border-b-2 border-blue-500 text-blue-600'
                   : 'text-gray-600 hover:text-gray-800'
@@ -971,71 +971,71 @@ const Admin = () => {
         </div>
       </div>
 
-      <div className="mt-8">
+      <div className="mt-4 sm:mt-8">
         {renderTabContent()}
       </div>
 
       {editingFixture && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full">
-          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-            <div className="mt-3">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Edit Fixture</h3>
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full p-2 sm:p-0">
+          <div className="relative top-4 sm:top-20 mx-auto p-3 sm:p-5 border w-full sm:w-96 shadow-lg rounded-md bg-white">
+            <div className="mt-2 sm:mt-3">
+              <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-3 sm:mb-4">Edit Fixture</h3>
               <form onSubmit={(e) => {
                 e.preventDefault();
                 handleUpdateFixture(editingFixture);
               }}>
-                <div className="mb-4">
-                  <label className="block text-gray-700 text-sm font-bold mb-2">Opponent</label>
+                <div className="mb-3 sm:mb-4">
+                  <label className="block text-gray-700 text-xs sm:text-sm font-bold mb-1 sm:mb-2">Opponent</label>
                   <input
                     type="text"
                     value={editingFixture.opponent}
                     onChange={(e) => setEditingFixture({...editingFixture, opponent: e.target.value})}
-                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                    className="shadow appearance-none border rounded w-full py-1.5 sm:py-2 px-2 sm:px-3 text-sm text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
                   />
                 </div>
-                <div className="mb-4">
-                  <label className="block text-gray-700 text-sm font-bold mb-2">Date</label>
+                <div className="mb-3 sm:mb-4">
+                  <label className="block text-gray-700 text-xs sm:text-sm font-bold mb-1 sm:mb-2">Date</label>
                   <input
                     type="date"
                     value={new Date(editingFixture.date).toISOString().split('T')[0]}
                     onChange={(e) => setEditingFixture({...editingFixture, date: e.target.value})}
-                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                    className="shadow appearance-none border rounded w-full py-1.5 sm:py-2 px-2 sm:px-3 text-sm text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
                   />
                 </div>
-                <div className="mb-4">
-                  <label className="block text-gray-700 text-sm font-bold mb-2">Venue</label>
+                <div className="mb-3 sm:mb-4">
+                  <label className="block text-gray-700 text-xs sm:text-sm font-bold mb-1 sm:mb-2">Venue</label>
                   <select
                     value={editingFixture.venue}
                     onChange={(e) => setEditingFixture({...editingFixture, venue: e.target.value})}
-                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                    className="shadow appearance-none border rounded w-full py-1.5 sm:py-2 px-2 sm:px-3 text-sm text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
                   >
                     <option value="home">Home</option>
                     <option value="away">Away</option>
                   </select>
                 </div>
-                <div className="mb-4">
-                  <label className="block text-gray-700 text-sm font-bold mb-2">Status</label>
+                <div className="mb-3 sm:mb-4">
+                  <label className="block text-gray-700 text-xs sm:text-sm font-bold mb-1 sm:mb-2">Status</label>
                   <select
                     value={editingFixture.status}
                     onChange={(e) => setEditingFixture({...editingFixture, status: e.target.value})}
-                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                    className="shadow appearance-none border rounded w-full py-1.5 sm:py-2 px-2 sm:px-3 text-sm text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
                   >
                     <option value="upcoming">Upcoming</option>
                     <option value="completed">Completed</option>
                     <option value="cancelled">Cancelled</option>
                   </select>
                 </div>
-                <div className="mb-4">
-                  <label className="block text-gray-700 text-sm font-bold mb-2">Competition</label>
+                <div className="mb-3 sm:mb-4">
+                  <label className="block text-gray-700 text-xs sm:text-sm font-bold mb-1 sm:mb-2">Competition</label>
                   <input
                     type="text"
                     value={editingFixture.competition}
                     onChange={(e) => setEditingFixture({...editingFixture, competition: e.target.value})}
-                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                    className="shadow appearance-none border rounded w-full py-1.5 sm:py-2 px-2 sm:px-3 text-sm text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
                   />
                 </div>
-                <div className="mb-4">
-                  <label className="block text-gray-700 text-sm font-bold mb-2">Score</label>
+                <div className="mb-3 sm:mb-4">
+                  <label className="block text-gray-700 text-xs sm:text-sm font-bold mb-1 sm:mb-2">Score</label>
                   <div className="flex space-x-2">
                     <input
                       type="number"
@@ -1044,7 +1044,7 @@ const Admin = () => {
                         ...editingFixture,
                         score: { ...editingFixture.score, home: parseInt(e.target.value) }
                       })}
-                      className="shadow appearance-none border rounded w-1/2 py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                      className="shadow appearance-none border rounded w-1/2 py-1.5 sm:py-2 px-2 sm:px-3 text-sm text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
                     />
                     <input
                       type="number"
@@ -1053,21 +1053,21 @@ const Admin = () => {
                         ...editingFixture,
                         score: { ...editingFixture.score, away: parseInt(e.target.value) }
                       })}
-                      className="shadow appearance-none border rounded w-1/2 py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                      className="shadow appearance-none border rounded w-1/2 py-1.5 sm:py-2 px-2 sm:px-3 text-sm text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
                     />
                   </div>
                 </div>
-                <div className="flex justify-end space-x-2">
+                <div className="flex justify-end space-x-2 mt-4">
                   <button
                     type="button"
                     onClick={() => setEditingFixture(null)}
-                    className="bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400"
+                    className="bg-gray-300 text-gray-700 px-3 sm:px-4 py-1.5 sm:py-2 rounded text-sm hover:bg-gray-400"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                    className="bg-blue-500 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded text-sm hover:bg-blue-600"
                   >
                     Save Changes
                   </button>
@@ -1079,43 +1079,43 @@ const Admin = () => {
       )}
 
       {editingPlayer && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full">
-          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-            <div className="mt-3">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Edit Player</h3>
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full p-2 sm:p-0">
+          <div className="relative top-4 sm:top-20 mx-auto p-3 sm:p-5 border w-full sm:w-96 shadow-lg rounded-md bg-white">
+            <div className="mt-2 sm:mt-3">
+              <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-3 sm:mb-4">Edit Player</h3>
               <form onSubmit={(e) => {
                 e.preventDefault();
                 handleUpdatePlayer(editingPlayer);
               }}>
-                <div className="mb-4">
-                  <label className="block text-gray-700 text-sm font-bold mb-2">Name</label>
+                <div className="mb-3 sm:mb-4">
+                  <label className="block text-gray-700 text-xs sm:text-sm font-bold mb-1 sm:mb-2">Name</label>
                   <input
                     type="text"
                     value={editingPlayer.name}
                     onChange={(e) => setEditingPlayer({...editingPlayer, name: e.target.value})}
-                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                    className="shadow appearance-none border rounded w-full py-1.5 sm:py-2 px-2 sm:px-3 text-sm text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
                   />
                 </div>
-                <div className="mb-4">
-                  <label className="block text-gray-700 text-sm font-bold mb-2">Number</label>
+                <div className="mb-3 sm:mb-4">
+                  <label className="block text-gray-700 text-xs sm:text-sm font-bold mb-1 sm:mb-2">Number</label>
                   <input
                     type="number"
                     value={editingPlayer.number}
                     onChange={(e) => setEditingPlayer({...editingPlayer, number: parseInt(e.target.value)})}
-                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                    className="shadow appearance-none border rounded w-full py-1.5 sm:py-2 px-2 sm:px-3 text-sm text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
                   />
                 </div>
-                <div className="mb-4">
-                  <label className="block text-gray-700 text-sm font-bold mb-2">Age</label>
+                <div className="mb-3 sm:mb-4">
+                  <label className="block text-gray-700 text-xs sm:text-sm font-bold mb-1 sm:mb-2">Age</label>
                   <input
                     type="number"
                     value={editingPlayer.age}
                     onChange={(e) => setEditingPlayer({...editingPlayer, age: parseInt(e.target.value)})}
-                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                    className="shadow appearance-none border rounded w-full py-1.5 sm:py-2 px-2 sm:px-3 text-sm text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
                   />
                 </div>
-                <div className="mb-4">
-                  <label className="block text-gray-700 text-sm font-bold mb-2">Positions</label>
+                <div className="mb-3 sm:mb-4">
+                  <label className="block text-gray-700 text-xs sm:text-sm font-bold mb-1 sm:mb-2">Positions</label>
                   <div className="space-y-2">
                     {[
                       'Outside Hitter',
@@ -1142,8 +1142,8 @@ const Admin = () => {
                     ))}
                   </div>
                 </div>
-                <div className="mb-4">
-                  <label className="block text-gray-700 text-sm font-bold mb-2">Statistics</label>
+                <div className="mb-3 sm:mb-4">
+                  <label className="block text-gray-700 text-xs sm:text-sm font-bold mb-1 sm:mb-2">Statistics</label>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-gray-700 text-sm mb-1">Kills</label>
@@ -1199,8 +1199,8 @@ const Admin = () => {
                     </div>
                   </div>
                 </div>
-                <div className="mb-4">
-                  <label className="block text-gray-700 text-sm font-bold mb-2">Image</label>
+                <div className="mb-3 sm:mb-4">
+                  <label className="block text-gray-700 text-xs sm:text-sm font-bold mb-1 sm:mb-2">Image</label>
                   <input
                     type="file"
                     onChange={(e) => {
@@ -1209,7 +1209,7 @@ const Admin = () => {
                         setEditingPlayer({...editingPlayer, image: file});
                       }
                     }}
-                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                    className="shadow appearance-none border rounded w-full py-1.5 sm:py-2 px-2 sm:px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
                   />
                   {editingPlayer.image && typeof editingPlayer.image === 'string' && (
                     <img
@@ -1219,17 +1219,17 @@ const Admin = () => {
                     />
                   )}
                 </div>
-                <div className="flex justify-end space-x-2">
+                <div className="flex justify-end space-x-2 mt-4">
                   <button
                     type="button"
                     onClick={() => setEditingPlayer(null)}
-                    className="bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400"
+                    className="bg-gray-300 text-gray-700 px-3 sm:px-4 py-1.5 sm:py-2 rounded text-sm hover:bg-gray-400"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                    className="bg-blue-500 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded text-sm hover:bg-blue-600"
                   >
                     Save Changes
                   </button>
