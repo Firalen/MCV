@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import mug2Logo from '../assets/mug2.webp';
 import axios from 'axios';
+import { API_ENDPOINTS } from '../config/api';
 
 const Register = () => {
   const [name, setName] = useState('');
@@ -26,26 +27,48 @@ const Register = () => {
     setLoading(true);
 
     try {
-      const response = await axios.post('http://localhost:3000/register', {
+      console.log('Attempting registration...');
+      const response = await axios.post(API_ENDPOINTS.REGISTER, {
         name,
         email,
         password
       });
 
-      // Store token and user data in localStorage
-      localStorage.setItem('token', response.data.token);
-      localStorage.setItem('user', JSON.stringify(response.data.user));
-      
-      // Update the user state in AuthContext
-      await register(response.data.user);
-      
-      // Navigate to home page after successful registration
-      navigate('/');
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to register. Please try again.');
-    }
+      console.log('Registration response:', response.data);
 
-    setLoading(false);
+      if (response.data && response.data.token) {
+        // Store token and user data in localStorage
+        localStorage.setItem('token', response.data.token);
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+        
+        // Update the user state in AuthContext
+        await register(response.data.user);
+        
+        // Navigate to home page after successful registration
+        navigate('/', { replace: true });
+      } else {
+        console.error('No token in response:', response.data);
+        setError('Registration successful but no token received');
+      }
+    } catch (err) {
+      console.error('Registration error:', err);
+      if (err.response) {
+        // The request was made and the server responded with a status code
+        // that falls out of the range of 2xx
+        console.error('Error response:', err.response.data);
+        setError(err.response.data.message || 'Failed to register. Please try again.');
+      } else if (err.request) {
+        // The request was made but no response was received
+        console.error('No response received:', err.request);
+        setError('No response from server. Please check your connection.');
+      } else {
+        // Something happened in setting up the request that triggered an Error
+        console.error('Request setup error:', err.message);
+        setError('Error setting up the request. Please try again.');
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

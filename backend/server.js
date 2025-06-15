@@ -32,12 +32,13 @@ console.log("JWT_SECRET exists:", !!process.env.JWT_SECRET);
 
 const app = express();
 app.use(cors({
-    origin: ['http://localhost:5173', 'http://127.0.0.1:5173'], // Frontend Vite default ports
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+  origin: ['http://localhost:3000', 'http://localhost:5173', process.env.FRONTEND_URL].filter(Boolean),
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
@@ -374,16 +375,18 @@ app.post("/register", checkDatabaseConnection, async (req, res) => {
             { expiresIn: "1d" }
         );
 
+        const userResponse = {
+            id: newUser._id,
+            name: newUser.name,
+            email: newUser.email,
+            role: newUser.role
+        };
+
         console.log("Registration successful");
-        res.status(201).json({
+        return res.status(201).json({
             message: "User registered successfully",
             token,
-            user: { 
-                id: newUser._id, 
-                name: newUser.name, 
-                email: newUser.email,
-                role: newUser.role
-            }
+            user: userResponse
         });
     } catch (err) {
         console.error("Registration error:", {
@@ -399,7 +402,7 @@ app.post("/register", checkDatabaseConnection, async (req, res) => {
             });
         }
 
-        res.status(500).json({ 
+        return res.status(500).json({ 
             message: "Error registering user", 
             error: err.message
         });

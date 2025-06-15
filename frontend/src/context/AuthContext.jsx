@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
+import { API_ENDPOINTS } from '../config/api';
 
 const AuthContext = createContext(null);
 
@@ -58,63 +59,42 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     // Check if user is logged in on mount
-    const checkAuth = async () => {
-      const token = localStorage.getItem('token');
-      const storedUser = localStorage.getItem('user');
-      
-      console.log('Checking auth on mount:', { token: !!token, storedUser: !!storedUser });
-      
-      if (token && storedUser) {
-        try {
-          const userData = JSON.parse(storedUser);
-          console.log('Found stored user:', userData);
-          setUser(userData);
-          
-          // Set axios default headers
-          axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-          console.log('Set axios default headers with token');
-        } catch (error) {
-          console.error('Error parsing stored user data:', error);
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-          setUser(null);
-        }
+    const token = localStorage.getItem('token');
+    const storedUser = localStorage.getItem('user');
+    
+    if (token && storedUser) {
+      try {
+        const userData = JSON.parse(storedUser);
+        setUser(userData);
+      } catch (error) {
+        console.error('Error parsing stored user:', error);
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
       }
-      setLoading(false);
-    };
-
-    checkAuth();
+    }
+    setLoading(false);
   }, []);
+
+  const register = async (userData) => {
+    try {
+      setUser(userData);
+      return userData;
+    } catch (error) {
+      console.error('Registration error in context:', error);
+      throw error;
+    }
+  };
 
   const login = async (email, password) => {
     try {
-      console.log('Attempting login for:', email);
-      const response = await axios.post('http://localhost:3000/login', {
-        email,
-        password
-      });
-
-      const { token, user: userData } = response.data;
-      console.log('Login response received:', { hasToken: !!token, userData });
+      const response = await axios.post(API_ENDPOINTS.LOGIN, { email, password });
+      const { token, user } = response.data;
       
-      if (!token || !userData || !userData.role) {
-        throw new Error('Invalid response from server');
-      }
-      
-      // Set axios default headers for all future requests
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      console.log('Set axios default headers with token');
-      
-      // Store in localStorage
       localStorage.setItem('token', token);
-      localStorage.setItem('user', JSON.stringify(userData));
-      console.log('Stored token and user data in localStorage');
+      localStorage.setItem('user', JSON.stringify(user));
+      setUser(user);
       
-      // Update state
-      setUser(userData);
-      console.log('Updated user state:', userData);
-      
-      return userData;
+      return user;
     } catch (error) {
       console.error('Login error:', error);
       throw error;
@@ -122,32 +102,23 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
-    console.log('Logging out user');
-    
-    // Remove token from axios headers
-    delete axios.defaults.headers.common['Authorization'];
-    console.log('Removed token from axios headers');
-    
-    // Clear localStorage
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    console.log('Cleared localStorage');
-    
-    // Update state
     setUser(null);
-    console.log('Reset user state');
   };
 
   const value = {
     user,
     loading,
+    register,
     login,
-    logout
+    logout,
+    setUser
   };
 
   return (
     <AuthContext.Provider value={value}>
-      {children}
+      {!loading && children}
     </AuthContext.Provider>
   );
 };
