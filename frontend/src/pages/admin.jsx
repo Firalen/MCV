@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react'
-import axios from 'axios'
 import { useAuth } from '../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import AddPlayer from '../components/AddPlayer'
 import AddFixture from '../components/AddFixture'
+import { axiosInstance, API_ENDPOINTS } from '../config/api'
 
 const Admin = () => {
   const [activeTab, setActiveTab] = useState('dashboard')
@@ -72,25 +72,11 @@ const Admin = () => {
   const fetchStats = async () => {
     try {
       console.log('Fetching admin stats...');
-      const token = localStorage.getItem('token');
-      console.log('Token available:', !!token);
-      
-      // Ensure token is set in headers
-      if (token) {
-        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      }
-      console.log('Axios headers:', axios.defaults.headers.common);
-      
-      const response = await axios.get('http://localhost:3000/api/admin/stats');
+      const response = await axiosInstance.get(API_ENDPOINTS.ADMIN.STATS);
       console.log('Stats response:', response.data);
       setStats(response.data);
     } catch (error) {
       console.error('Error fetching stats:', error);
-      console.error('Error details:', {
-        status: error.response?.status,
-        message: error.response?.data?.message,
-        headers: error.config?.headers
-      });
       setError('Failed to fetch statistics');
     } finally {
       setLoading(false);
@@ -99,44 +85,22 @@ const Admin = () => {
 
   const fetchPlayers = async () => {
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        console.error('No token found');
-        setError('Authentication required');
-        return;
-      }
-
-      // Set the authorization header
-      const config = {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      };
-      
-      console.log('Fetching players with config:', config);
-      
-      const response = await axios.get('http://localhost:3000/api/admin/players', config);
+      console.log('Fetching players...');
+      const response = await axiosInstance.get(API_ENDPOINTS.ADMIN.PLAYERS);
       console.log('Players response:', response.data);
       
       if (response.data) {
         setPlayers(response.data);
-        setError(null); // Clear any previous errors
+        setError(null);
       } else {
         console.error('No data received from players endpoint');
         setError('No player data received');
       }
     } catch (error) {
       console.error('Error fetching players:', error);
-      console.error('Error details:', {
-        status: error.response?.status,
-        message: error.response?.data?.message,
-        headers: error.config?.headers,
-        url: error.config?.url
-      });
       
       if (error.response?.status === 401) {
         setError('Authentication failed. Please log in again.');
-        // Optionally redirect to login
         navigate('/login');
       } else if (error.response?.status === 403) {
         setError('You do not have permission to view players.');
@@ -148,7 +112,7 @@ const Admin = () => {
 
   const fetchFixtures = async () => {
     try {
-      const response = await axios.get('http://localhost:3000/api/fixtures');
+      const response = await axiosInstance.get(API_ENDPOINTS.ADMIN.FIXTURES);
       setFixtures(response.data);
       setLoading(false);
     } catch (error) {
@@ -160,7 +124,7 @@ const Admin = () => {
 
   const fetchNews = async () => {
     try {
-      const response = await axios.get('http://localhost:3000/api/admin/news');
+      const response = await axiosInstance.get(API_ENDPOINTS.ADMIN.NEWS);
       setNews(response.data);
     } catch (error) {
       console.error('Error fetching news:', error);
@@ -170,7 +134,7 @@ const Admin = () => {
 
   const fetchLeagueTable = async () => {
     try {
-      const response = await axios.get('http://localhost:3000/api/admin/league');
+      const response = await axiosInstance.get(API_ENDPOINTS.ADMIN.LEAGUE);
       setLeagueTable(response.data);
     } catch (error) {
       console.error('Error fetching league table:', error);
@@ -202,7 +166,7 @@ const Admin = () => {
     }
 
     try {
-      await axios.delete(`http://localhost:3000/api/admin/players/${id}`);
+      await axiosInstance.delete(API_ENDPOINTS.ADMIN.PLAYERS.replace(':id', id));
       setPlayers(players.filter(player => player._id !== id));
     } catch (error) {
       console.error('Error deleting player:', error);
@@ -213,7 +177,7 @@ const Admin = () => {
   const handleAddFixture = async (e) => {
     e.preventDefault()
     try {
-      await axios.post('http://localhost:3000/api/admin/fixtures', newFixture)
+      await axiosInstance.post(API_ENDPOINTS.ADMIN.FIXTURES, newFixture)
       setNewFixture({
         opponent: '',
         date: '',
@@ -229,7 +193,7 @@ const Admin = () => {
 
   const handleUpdateFixture = async (updatedFixture) => {
     try {
-      await axios.put(`http://localhost:3000/api/admin/fixtures/${updatedFixture._id}`, updatedFixture);
+      await axiosInstance.put(API_ENDPOINTS.ADMIN.FIXTURES.replace(':id', updatedFixture._id), updatedFixture);
       setFixtures(fixtures.map(fixture => 
         fixture._id === updatedFixture._id ? updatedFixture : fixture
       ));
@@ -246,7 +210,7 @@ const Admin = () => {
     }
 
     try {
-      await axios.delete(`http://localhost:3000/api/admin/fixtures/${id}`);
+      await axiosInstance.delete(API_ENDPOINTS.ADMIN.FIXTURES.replace(':id', id));
       setFixtures(fixtures.filter(fixture => fixture._id !== id));
     } catch (error) {
       console.error('Error deleting fixture:', error);
@@ -275,8 +239,8 @@ const Admin = () => {
         }
       });
 
-      const response = await axios.put(
-        `http://localhost:3000/api/admin/players/${updatedPlayer._id}`,
+      const response = await axiosInstance.put(
+        API_ENDPOINTS.ADMIN.PLAYERS.replace(':id', updatedPlayer._id),
         formData,
         {
           headers: {
@@ -297,7 +261,7 @@ const Admin = () => {
 
   const handleAddStoreItem = async (itemData) => {
     try {
-      const response = await axios.post('http://localhost:3000/api/admin/store', itemData)
+      const response = await axiosInstance.post(API_ENDPOINTS.ADMIN.STORE, itemData)
       setStoreItems([...storeItems, response.data])
     } catch (error) {
       setError(error.response?.data?.message || 'Failed to add store item')
@@ -306,7 +270,7 @@ const Admin = () => {
 
   const handleUpdateStoreItem = async (id, itemData) => {
     try {
-      const response = await axios.put(`http://localhost:3000/api/admin/store/${id}`, itemData)
+      const response = await axiosInstance.put(API_ENDPOINTS.ADMIN.STORE.replace(':id', id), itemData)
       setStoreItems(storeItems.map(item => item._id === id ? response.data : item))
     } catch (error) {
       setError(error.response?.data?.message || 'Failed to update store item')
@@ -315,7 +279,7 @@ const Admin = () => {
 
   const handleDeleteStoreItem = async (id) => {
     try {
-      await axios.delete(`http://localhost:3000/api/admin/store/${id}`)
+      await axiosInstance.delete(API_ENDPOINTS.ADMIN.STORE.replace(':id', id))
       setStoreItems(storeItems.filter(item => item._id !== id))
     } catch (error) {
       setError(error.response?.data?.message || 'Failed to delete store item')
@@ -333,7 +297,7 @@ const Admin = () => {
         formData.append('image', newsImage);
       }
 
-      const response = await axios.post('http://localhost:3000/api/admin/news', formData, {
+      const response = await axiosInstance.post(API_ENDPOINTS.ADMIN.NEWS, formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
@@ -373,8 +337,8 @@ const Admin = () => {
         formData.append('image', newsImage);
       }
 
-      const response = await axios.put(
-        `http://localhost:3000/api/admin/news/${editingNews._id}`,
+      const response = await axiosInstance.put(
+        API_ENDPOINTS.ADMIN.NEWS.replace(':id', editingNews._id),
         formData,
         {
           headers: {
@@ -403,7 +367,7 @@ const Admin = () => {
     }
 
     try {
-      await axios.delete(`http://localhost:3000/api/admin/news/${id}`);
+      await axiosInstance.delete(API_ENDPOINTS.ADMIN.NEWS.replace(':id', id));
       setNews(news.filter(item => item._id !== id));
       fetchStats();
     } catch (error) {
@@ -415,7 +379,7 @@ const Admin = () => {
   const handleAddTeam = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.post('http://localhost:3000/api/admin/league', newTeam);
+      const response = await axiosInstance.post(API_ENDPOINTS.ADMIN.LEAGUE, newTeam);
       setLeagueTable([...leagueTable, response.data]);
       setNewTeam({
         teamName: '',
@@ -446,8 +410,8 @@ const Admin = () => {
   const handleUpdateTeam = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.put(
-        `http://localhost:3000/api/admin/league/${editingTeam._id}`,
+      const response = await axiosInstance.put(
+        API_ENDPOINTS.ADMIN.LEAGUE.replace(':id', editingTeam._id),
         newTeam
       );
       setLeagueTable(leagueTable.map(team => 
@@ -474,7 +438,7 @@ const Admin = () => {
     }
 
     try {
-      await axios.delete(`http://localhost:3000/api/admin/league/${id}`);
+      await axiosInstance.delete(API_ENDPOINTS.ADMIN.LEAGUE.replace(':id', id));
       setLeagueTable(leagueTable.filter(team => team._id !== id));
     } catch (error) {
       console.error('Error deleting team:', error);

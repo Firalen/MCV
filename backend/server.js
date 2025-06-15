@@ -31,12 +31,34 @@ console.log("MONGO_URI first 20 chars:", process.env.MONGO_URI ? process.env.MON
 console.log("JWT_SECRET exists:", !!process.env.JWT_SECRET);
 
 const app = express();
+
+// CORS configuration
+const allowedOrigins = [
+  'http://localhost:5173', // Vite dev server
+  'http://localhost:3000', // Local frontend
+  'https://mugher-cement-vc.onrender.com', // Production frontend
+  'https://mugher-backend.onrender.com' // Production backend
+];
+
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://localhost:5173', process.env.FRONTEND_URL].filter(Boolean),
+  origin: function(origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) === -1) {
+      console.log('CORS blocked request from origin:', origin);
+      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+      return callback(new Error(msg), false);
+    }
+    console.log('CORS allowed request from origin:', origin);
+    return callback(null, true);
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
+// Add body parser middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
