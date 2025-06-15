@@ -15,7 +15,6 @@ const League = require('../models/League');
 // Admin stats endpoint
 router.get('/stats', auth, admin, async (req, res) => {
   try {
-    console.log('Admin stats - User:', req.user);
     const [totalUsers, totalPlayers, totalFixtures, totalNews] = await Promise.all([
       User.countDocuments(),
       Player.countDocuments(),
@@ -37,17 +36,21 @@ router.get('/stats', auth, admin, async (req, res) => {
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, 'uploads/players')
+  destination: (req, file, cb) => {
+    const dir = 'uploads/players';
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    cb(null, dir);
   },
-  filename: function (req, file, cb) {
-    cb(null, Date.now() + '-' + file.originalname)
+  filename: (req, file, cb) => {
+    cb(null, `${Date.now()}-${file.originalname}`);
   }
 });
 
-const upload = multer({ 
-  storage: storage,
-  fileFilter: function (req, file, cb) {
+const upload = multer({
+  storage,
+  fileFilter: (req, file, cb) => {
     const filetypes = /jpeg|jpg|png/;
     const mimetype = filetypes.test(file.mimetype);
     const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
@@ -61,21 +64,21 @@ const upload = multer({
 
 // Configure multer for news image uploads
 const newsStorage = multer.diskStorage({
-  destination: function (req, file, cb) {
+  destination: (req, file, cb) => {
     const dir = 'uploads/news';
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
     cb(null, dir);
   },
-  filename: function (req, file, cb) {
-    cb(null, Date.now() + '-' + file.originalname);
+  filename: (req, file, cb) => {
+    cb(null, `${Date.now()}-${file.originalname}`);
   }
 });
 
-const newsUpload = multer({ 
+const newsUpload = multer({
   storage: newsStorage,
-  fileFilter: function (req, file, cb) {
+  fileFilter: (req, file, cb) => {
     const filetypes = /jpeg|jpg|png/;
     const mimetype = filetypes.test(file.mimetype);
     const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
@@ -93,14 +96,13 @@ router.get('/players', auth, admin, async (req, res) => {
     const players = await Player.find().sort({ number: 1 });
     res.json(players);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('Error fetching players:', error);
+    res.status(500).json({ message: 'Error fetching players' });
   }
 });
 
 router.post('/players', auth, admin, upload.single('image'), async (req, res) => {
   try {
-    console.log('Received player data:', req.body); // Debug log
-
     if (!req.file) {
       return res.status(400).json({ message: 'Player image is required' });
     }
@@ -112,12 +114,9 @@ router.post('/players', auth, admin, upload.single('image'), async (req, res) =>
       blocks: 0
     };
 
-    // Get positions from request body
     const positions = Array.isArray(req.body.positions) 
       ? req.body.positions 
       : [req.body.positions].filter(Boolean);
-
-    console.log('Processing positions:', positions); // Debug log
 
     if (!positions || positions.length === 0) {
       return res.status(400).json({ message: 'At least one position must be selected' });
@@ -125,33 +124,30 @@ router.post('/players', auth, admin, upload.single('image'), async (req, res) =>
 
     const player = new Player({
       name: req.body.name,
-      positions: positions, // Changed from position to positions
+      positions,
       number: req.body.number,
       age: req.body.age,
       nationality: req.body.nationality,
       image: `/uploads/players/${req.file.filename}`,
-      stats: stats
+      stats
     });
 
-    console.log('Creating player with data:', player); // Debug log
-
     const newPlayer = await player.save();
-    console.log('Player created successfully:', newPlayer); // Debug log
     res.status(201).json(newPlayer);
   } catch (error) {
     console.error('Error adding player:', error);
-    res.status(400).json({ message: error.message });
+    res.status(400).json({ message: 'Error adding player' });
   }
 });
 
 router.put('/players/:id', auth, admin, upload.single('image'), async (req, res) => {
   try {
-    const { name, number, age, positions, skills } = req.body;
     const player = await Player.findById(req.params.id);
-
     if (!player) {
       return res.status(404).json({ message: 'Player not found' });
     }
+
+    const { name, number, age, positions, skills } = req.body;
 
     // Update player fields
     player.name = name;
@@ -169,26 +165,37 @@ router.put('/players/:id', auth, admin, upload.single('image'), async (req, res)
           fs.unlinkSync(oldImagePath);
         }
       }
-      player.image = `uploads/players/${req.file.filename}`;
+      player.image = `/uploads/players/${req.file.filename}`;
     }
 
     await player.save();
     res.json(player);
   } catch (error) {
     console.error('Error updating player:', error);
-    res.status(500).json({ message: 'Error updating player', error: error.message });
+    res.status(500).json({ message: 'Error updating player' });
   }
 });
 
 router.delete('/players/:id', auth, admin, async (req, res) => {
   try {
     const player = await Player.findById(req.params.id);
-    if (!player) return res.status(404).json({ message: 'Player not found' });
+    if (!player) {
+      return res.status(404).json({ message: 'Player not found' });
+    }
+
+    // Delete player image if it exists
+    if (player.image) {
+      const imagePath = path.join(__dirname, '..', player.image);
+      if (fs.existsSync(imagePath)) {
+        fs.unlinkSync(imagePath);
+      }
+    }
 
     await Player.deleteOne({ _id: req.params.id });
-    res.json({ message: 'Player deleted' });
+    res.json({ message: 'Player deleted successfully' });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('Error deleting player:', error);
+    res.status(500).json({ message: 'Error deleting player' });
   }
 });
 

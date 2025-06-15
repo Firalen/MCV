@@ -206,128 +206,46 @@ const adminRoutes = require('./routes/admin');
 // Mount admin routes
 app.use('/api/admin', adminRoutes);
 
-// Public players endpoint
+// Public routes
 app.get('/api/players', checkDatabaseConnection, async (req, res) => {
   try {
     console.log('Public players endpoint hit');
-    console.log('Database connection state:', mongoose.connection.readyState);
-    console.log('Is connected:', isConnected);
-
-    if (!mongoose.connection.readyState === 1) {
-      console.log('Database not ready, returning 503');
-      return res.status(503).json({ 
-        message: 'Database connection not ready',
-        state: mongoose.connection.readyState
-      });
-    }
-
-    console.log('Fetching players from database...');
     const players = await Player.find().sort({ number: 1 });
-    console.log(`Found ${players.length} players`);
-    
-    if (!players || players.length === 0) {
-      console.log('No players found in database');
-      return res.json([]);
-    }
-
-    console.log('Successfully retrieved players');
     res.json(players);
   } catch (error) {
     console.error('Error in /api/players endpoint:', error);
-    console.error('Error stack:', error.stack);
-    res.status(500).json({ 
-      message: 'Error fetching players',
-      error: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-    });
+    res.status(500).json({ message: 'Error fetching players' });
   }
 });
 
-// Public fixtures endpoint
 app.get('/api/fixtures', checkDatabaseConnection, async (req, res) => {
   try {
     console.log('Public fixtures endpoint hit');
-    console.log('Database connection state:', mongoose.connection.readyState);
-    console.log('Is connected:', isConnected);
-
-    if (!mongoose.connection.readyState === 1) {
-      console.log('Database not ready, returning 503');
-      return res.status(503).json({ 
-        message: 'Database connection not ready',
-        state: mongoose.connection.readyState
-      });
-    }
-
-    console.log('Fetching fixtures from database...');
     const fixtures = await Fixture.find().sort({ date: 1 });
-    console.log(`Found ${fixtures.length} fixtures`);
-    
-    if (!fixtures || fixtures.length === 0) {
-      console.log('No fixtures found in database');
-      return res.json([]);
-    }
-
-    console.log('Successfully retrieved fixtures');
     res.json(fixtures);
   } catch (error) {
     console.error('Error in /api/fixtures endpoint:', error);
-    console.error('Error stack:', error.stack);
-    res.status(500).json({ 
-      message: 'Error fetching fixtures',
-      error: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-    });
+    res.status(500).json({ message: 'Error fetching fixtures' });
   }
 });
 
-// Public news endpoint
 app.get('/api/news', checkDatabaseConnection, async (req, res) => {
   try {
     console.log('Public news endpoint hit');
-    console.log('Database connection state:', mongoose.connection.readyState);
-    console.log('Is connected:', isConnected);
-
-    if (!mongoose.connection.readyState === 1) {
-      console.log('Database not ready, returning 503');
-      return res.status(503).json({ 
-        message: 'Database connection not ready',
-        state: mongoose.connection.readyState
-      });
-    }
-
-    console.log('Fetching news from database...');
     const news = await News.find().sort({ createdAt: -1 });
-    console.log(`Found ${news.length} news articles`);
-    
-    if (!news || news.length === 0) {
-      console.log('No news found in database');
-      return res.json([]);
-    }
-
-    console.log('Successfully retrieved news');
     res.json(news);
   } catch (error) {
     console.error('Error in /api/news endpoint:', error);
-    console.error('Error stack:', error.stack);
-    res.status(500).json({ 
-      message: 'Error fetching news',
-      error: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-    });
+    res.status(500).json({ message: 'Error fetching news' });
   }
 });
 
-// Public news detail endpoint
 app.get('/api/news/:id', checkDatabaseConnection, async (req, res) => {
   try {
-    console.log('Fetching news article:', req.params.id);
     const news = await News.findById(req.params.id);
-    
     if (!news) {
       return res.status(404).json({ message: 'News article not found' });
     }
-
-    console.log('Found news article:', news.title);
     res.json(news);
   } catch (error) {
     console.error('Error fetching news article:', error);
@@ -335,12 +253,10 @@ app.get('/api/news/:id', checkDatabaseConnection, async (req, res) => {
   }
 });
 
-// Public league endpoint
 app.get('/api/league', checkDatabaseConnection, async (req, res) => {
   try {
     console.log('Fetching league table...');
     const leagueTable = await League.find().sort({ position: 1 });
-    console.log(`Found ${leagueTable.length} teams in the league table`);
     res.json(leagueTable);
   } catch (error) {
     console.error('Error fetching league table:', error);
@@ -348,132 +264,78 @@ app.get('/api/league', checkDatabaseConnection, async (req, res) => {
   }
 });
 
-// Add a test endpoint to verify server is working
-app.get('/api/test', (req, res) => {
-  res.json({ message: 'Server is working!' });
-});
-
-// ✅ Register route
-app.post("/register", checkDatabaseConnection, async (req, res) => {
-    console.log("Registration attempt received");
-    
+// Auth routes
+app.post('/register', checkDatabaseConnection, async (req, res) => {
+  try {
     const { name, email, password } = req.body;
 
-    // Input validation
     if (!name || !email || !password) {
-        console.log("Missing required fields");
-        return res.status(400).json({ 
-            message: "All fields are required",
-            details: {
-                name: !name ? "Name is required" : null,
-                email: !email ? "Email is required" : null,
-                password: !password ? "Password is required" : null
-            }
-        });
+      return res.status(400).json({ message: 'All fields are required' });
     }
 
-    try {
-        console.log("Checking for existing user");
-        const existingUser = await User.findOne({ email });
-        if (existingUser) {
-            console.log("User already exists");
-            return res.status(400).json({ message: "User already exists" });
-        }
-
-        console.log("Hashing password");
-        const hashedPassword = await bcrypt.hash(password, 10);
-
-        console.log("Creating new user");
-        const newUser = new User({ 
-            name, 
-            email, 
-            password: hashedPassword,
-            role: "member",
-            createdAt: new Date()
-        });
-
-        console.log("Saving user");
-        await newUser.save();
-        console.log("User saved successfully");
-
-        console.log("Generating token");
-        const token = jwt.sign(
-            { id: newUser._id }, 
-            process.env.JWT_SECRET, 
-            { expiresIn: "1d" }
-        );
-
-        const userResponse = {
-            id: newUser._id,
-            name: newUser.name,
-            email: newUser.email,
-            role: newUser.role
-        };
-
-        console.log("Registration successful");
-        return res.status(201).json({
-            message: "User registered successfully",
-            token,
-            user: userResponse
-        });
-    } catch (err) {
-        console.error("Registration error:", {
-            name: err.name,
-            message: err.message,
-            code: err.code
-        });
-
-        if (err.code === 11000) {
-            return res.status(400).json({ 
-                message: "Email already exists",
-                error: "DUPLICATE_EMAIL"
-            });
-        }
-
-        return res.status(500).json({ 
-            message: "Error registering user", 
-            error: err.message
-        });
-    }
-});
-
-// Login route
-app.post('/login', async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    console.log('Login attempt for:', email);
-    
-    const user = await User.findOne({ email });
-    console.log('User found:', user ? 'Yes' : 'No');
-    
-    if (!user) {
-      console.log('Login failed - User not found');
-      return res.status(401).json({ message: 'Invalid email or password' });
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ message: 'User already exists' });
     }
 
-    const isMatch = await bcrypt.compare(password, user.password);
-    console.log('Password match:', isMatch ? 'Yes' : 'No');
-    
-    if (!isMatch) {
-      console.log('Login failed - Invalid password');
-      return res.status(401).json({ message: 'Invalid email or password' });
-    }
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const newUser = new User({
+      name,
+      email,
+      password: hashedPassword,
+      role: 'member',
+      createdAt: new Date()
+    });
 
-    // Update last login
-    user.lastLogin = new Date();
-    await user.save();
-    console.log('Last login updated');
-
-    // Create token with user ID and role
+    await newUser.save();
     const token = jwt.sign(
-      { id: user._id, role: user.role },
+      { userId: newUser._id, role: newUser.role },
       process.env.JWT_SECRET,
       { expiresIn: '24h' }
     );
-    console.log('Token generated');
 
-    // Send response with token and user data
-    const response = {
+    res.status(201).json({
+      message: 'User registered successfully',
+      token,
+      user: {
+        id: newUser._id,
+        name: newUser.name,
+        email: newUser.email,
+        role: newUser.role
+      }
+    });
+  } catch (error) {
+    console.error('Registration error:', error);
+    res.status(500).json({ message: 'Error registering user' });
+  }
+});
+
+app.post('/login', checkDatabaseConnection, async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ message: 'Email and password are required' });
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+
+    const isValidPassword = await bcrypt.compare(password, user.password);
+    if (!isValidPassword) {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+
+    const token = jwt.sign(
+      { userId: user._id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    res.json({
+      message: 'Login successful',
       token,
       user: {
         id: user._id,
@@ -481,63 +343,26 @@ app.post('/login', async (req, res) => {
         email: user.email,
         role: user.role
       }
-    };
-    console.log('Login successful - Sending response');
-    res.json(response);
+    });
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ message: 'Error logging in' });
   }
 });
 
-// Profile route
-app.get('/profile', auth, async (req, res) => {
-  try {
-    const user = await User.findById(req.user.id).select('-password');
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-    res.json(user);
-  } catch (error) {
-    console.error('Profile error:', error);
-    res.status(500).json({ message: 'Error fetching profile' });
-  }
+// Test endpoint
+app.get('/api/test', (req, res) => {
+  res.json({ message: 'Server is working!' });
 });
 
-// Update Profile route
-app.put("/profile", auth, async (req, res) => {
-    try {
-        const { name, email } = req.body;
-        const user = await User.findById(req.user.id);
-        
-        if (!user) {
-            return res.status(404).json({ message: "User not found" });
-        }
-
-        // Update user information
-        if (name) user.name = name;
-        if (email) user.email = email;
-
-        await user.save();
-
-        res.json({
-            message: "Profile updated successfully",
-            profile: {
-                id: user._id,
-                name: user.name,
-                email: user.email,
-                role: user.role,
-                updatedAt: new Date()
-            }
-        });
-    } catch (err) {
-        console.error("Profile update error:", err);
-        res.status(500).json({ message: "Error updating profile" });
-    }
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error('Error:', err);
+  res.status(500).json({ message: 'Internal server error' });
 });
 
 // Start server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
+  console.log(`Server is running on port ${PORT}`);
 });
