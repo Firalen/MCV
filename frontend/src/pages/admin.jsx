@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import AddPlayer from '../components/AddPlayer'
 import AddFixture from '../components/AddFixture'
-import { axiosInstance, API_ENDPOINTS } from '../config/api'
+import { axiosInstance, API_ENDPOINTS, getImageUrl } from '../config/api'
 
 const Admin = () => {
   const [activeTab, setActiveTab] = useState('dashboard')
@@ -458,7 +458,7 @@ const Admin = () => {
                 {players.map((player) => (
                   <div key={player._id} className="bg-white p-3 sm:p-4 rounded-lg shadow">
                     <img 
-                      src={`http://localhost:3000${player.image}`} 
+                      src={getImageUrl(player.image)} 
                       alt={player.name} 
                       className="w-full h-32 sm:h-48 object-cover rounded-lg mb-3 sm:mb-4"
                       onError={(e) => {
@@ -672,7 +672,7 @@ const Admin = () => {
                     <div className="relative">
                       {item.image && (
                         <img 
-                          src={`http://localhost:3000${item.image}`} 
+                          src={getImageUrl(item.image)} 
                           alt={item.title} 
                           className="w-full h-48 object-cover"
                           onError={(e) => {
@@ -1177,7 +1177,7 @@ const Admin = () => {
                   />
                   {editingPlayer.image && typeof editingPlayer.image === 'string' && (
                     <img
-                      src={`http://localhost:3000/${editingPlayer.image}`}
+                      src={getImageUrl(editingPlayer.image)}
                       alt="Current player"
                       className="mt-2 h-20 w-20 object-cover rounded"
                     />

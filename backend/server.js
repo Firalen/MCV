@@ -37,9 +37,10 @@ const allowedOrigins = [
   'http://localhost:5173', // Vite dev server
   'http://localhost:3000', // Local frontend
   'https://mugher-cement-vc.onrender.com', // Production frontend
-  'https://mugher-backend.onrender.com' // Production backend
+  'https://mcv-7x6t.onrender.com' // Production backend
 ];
 
+// Enable CORS for all routes
 app.use(cors({
   origin: function(origin, callback) {
     // Allow requests with no origin (like mobile apps or curl requests)
@@ -54,9 +55,14 @@ app.use(cors({
     return callback(null, true);
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  exposedHeaders: ['Content-Range', 'X-Content-Range'],
+  maxAge: 86400 // 24 hours
 }));
+
+// Handle preflight requests
+app.options('*', cors());
 
 // Add body parser middleware
 app.use(express.json());

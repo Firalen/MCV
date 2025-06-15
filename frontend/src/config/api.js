@@ -6,9 +6,16 @@ const isDevelopment = import.meta.env.MODE === 'development';
 // Set the API URL based on environment
 const API_BASE_URL = isDevelopment 
   ? 'http://localhost:3000'
-  : 'https://mugher-backend.onrender.com';
+  : 'https://mcv-7x6t.onrender.com';
 
 console.log('API Base URL:', API_BASE_URL); // For debugging
+
+// Helper function to get the correct image URL
+export const getImageUrl = (path) => {
+  if (!path) return '';
+  if (path.startsWith('http')) return path;
+  return `${API_BASE_URL}${path.startsWith('/') ? path : `/${path}`}`;
+};
 
 export const API_ENDPOINTS = {
   LOGIN: `${API_BASE_URL}/login`,
