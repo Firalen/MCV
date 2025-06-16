@@ -18,11 +18,14 @@ export const getImageUrl = (path) => {
 };
 
 export const API_ENDPOINTS = {
-  LOGIN: `${API_BASE_URL}/login`,
-  REGISTER: `${API_BASE_URL}/register`,
-  PROFILE: `${API_BASE_URL}/profile`,
+  LOGIN: `${API_BASE_URL}/api/login`,
+  REGISTER: `${API_BASE_URL}/api/register`,
+  PROFILE: `${API_BASE_URL}/api/profile`,
   NEWS: `${API_BASE_URL}/api/news`,
   LEAGUE: `${API_BASE_URL}/api/league`,
+  PLAYERS: `${API_BASE_URL}/api/players`,
+  FIXTURES: `${API_BASE_URL}/api/fixtures`,
+  TEST: `${API_BASE_URL}/api/test`,
   ADMIN: {
     STATS: `${API_BASE_URL}/api/admin/stats`,
     PLAYERS: `${API_BASE_URL}/api/admin/players`,
