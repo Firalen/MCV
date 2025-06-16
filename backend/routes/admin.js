@@ -140,7 +140,7 @@ router.post('/players', auth, admin, upload.single('image'), async (req, res) =>
   }
 });
 
-router.put('/players/:id', auth, admin, upload.single('image'), async (req, res) => {
+router.put('/players/:id([0-9a-fA-F]{24})', auth, admin, upload.single('image'), async (req, res) => {
   try {
     const player = await Player.findById(req.params.id);
     if (!player) {
@@ -176,7 +176,7 @@ router.put('/players/:id', auth, admin, upload.single('image'), async (req, res)
   }
 });
 
-router.delete('/players/:id', auth, admin, async (req, res) => {
+router.delete('/players/:id([0-9a-fA-F]{24})', auth, admin, async (req, res) => {
   try {
     const player = await Player.findById(req.params.id);
     if (!player) {
@@ -236,7 +236,7 @@ router.post('/fixtures', auth, admin, async (req, res) => {
   }
 });
 
-router.put('/fixtures/:id', auth, admin, async (req, res) => {
+router.put('/fixtures/:id([0-9a-fA-F]{24})', auth, admin, async (req, res) => {
   try {
     const { opponent, date, venue, status, competition, score } = req.body;
 
@@ -265,7 +265,7 @@ router.put('/fixtures/:id', auth, admin, async (req, res) => {
   }
 });
 
-router.delete('/fixtures/:id', auth, admin, async (req, res) => {
+router.delete('/fixtures/:id([0-9a-fA-F]{24})', auth, admin, async (req, res) => {
   try {
     const fixture = await Fixture.findById(req.params.id);
     if (!fixture) {
@@ -310,7 +310,7 @@ router.post('/store', auth, admin, async (req, res) => {
   }
 });
 
-router.put('/store/:id', auth, admin, async (req, res) => {
+router.put('/store/:id([0-9a-fA-F]{24})', auth, admin, async (req, res) => {
   try {
     const item = await StoreItem.findById(req.params.id);
     if (!item) return res.status(404).json({ message: 'Item not found' });
@@ -323,7 +323,7 @@ router.put('/store/:id', auth, admin, async (req, res) => {
   }
 });
 
-router.delete('/store/:id', auth, admin, async (req, res) => {
+router.delete('/store/:id([0-9a-fA-F]{24})', auth, admin, async (req, res) => {
   try {
     const item = await StoreItem.findById(req.params.id);
     if (!item) return res.status(404).json({ message: 'Item not found' });
@@ -347,9 +347,6 @@ router.get('/news', auth, admin, async (req, res) => {
 
 router.post('/news', auth, admin, newsUpload.single('image'), async (req, res) => {
   try {
-    console.log('Received news data:', req.body);
-    console.log('Received file:', req.file);
-
     const { title, content, category } = req.body;
 
     if (!title || !content) {
@@ -363,10 +360,7 @@ router.post('/news', auth, admin, newsUpload.single('image'), async (req, res) =
       image: req.file ? `/uploads/news/${req.file.filename}` : undefined
     });
 
-    console.log('Creating news with data:', news);
-
     const newNews = await news.save();
-    console.log('News created successfully:', newNews);
     res.status(201).json(newNews);
   } catch (error) {
     console.error('Error creating news:', error);
@@ -374,7 +368,7 @@ router.post('/news', auth, admin, newsUpload.single('image'), async (req, res) =
   }
 });
 
-router.put('/news/:id', auth, admin, newsUpload.single('image'), async (req, res) => {
+router.put('/news/:id([0-9a-fA-F]{24})', auth, admin, newsUpload.single('image'), async (req, res) => {
   try {
     const { title, content, category } = req.body;
     const news = await News.findById(req.params.id);
@@ -408,7 +402,7 @@ router.put('/news/:id', auth, admin, newsUpload.single('image'), async (req, res
   }
 });
 
-router.delete('/news/:id', auth, admin, async (req, res) => {
+router.delete('/news/:id([0-9a-fA-F]{24})', auth, admin, async (req, res) => {
   try {
     const news = await News.findById(req.params.id);
     if (!news) {
@@ -477,7 +471,7 @@ router.post('/league', auth, admin, async (req, res) => {
   }
 });
 
-router.put('/league/:id', auth, admin, async (req, res) => {
+router.put('/league/:id([0-9a-fA-F]{24})', auth, admin, async (req, res) => {
   try {
     const { teamName, played, wins, losses, points, position } = req.body;
     
@@ -509,7 +503,7 @@ router.put('/league/:id', auth, admin, async (req, res) => {
   }
 });
 
-router.delete('/league/:id', auth, admin, async (req, res) => {
+router.delete('/league/:id([0-9a-fA-F]{24})', auth, admin, async (req, res) => {
   try {
     const leagueEntry = await League.findByIdAndDelete(req.params.id);
     

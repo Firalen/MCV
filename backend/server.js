@@ -99,6 +99,9 @@ if (!fs.existsSync('uploads')) {
 if (!fs.existsSync('uploads/players')) {
   fs.mkdirSync('uploads/players');
 }
+if (!fs.existsSync('uploads/news')) {
+  fs.mkdirSync('uploads/news');
+}
 
 // Serve static files from uploads directory
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -203,44 +206,41 @@ app.use((req, res, next) => {
 // Import admin routes
 const adminRoutes = require('./routes/admin');
 
-// Mount admin routes
+// Mount admin routes with proper path
 app.use('/api/admin', adminRoutes);
 
-// Public routes
+// Public routes with proper path parameters
 app.get('/api/players', checkDatabaseConnection, async (req, res) => {
   try {
-    console.log('Public players endpoint hit');
     const players = await Player.find().sort({ number: 1 });
     res.json(players);
   } catch (error) {
-    console.error('Error in /api/players endpoint:', error);
+    console.error('Error fetching players:', error);
     res.status(500).json({ message: 'Error fetching players' });
   }
 });
 
 app.get('/api/fixtures', checkDatabaseConnection, async (req, res) => {
   try {
-    console.log('Public fixtures endpoint hit');
     const fixtures = await Fixture.find().sort({ date: 1 });
     res.json(fixtures);
   } catch (error) {
-    console.error('Error in /api/fixtures endpoint:', error);
+    console.error('Error fetching fixtures:', error);
     res.status(500).json({ message: 'Error fetching fixtures' });
   }
 });
 
 app.get('/api/news', checkDatabaseConnection, async (req, res) => {
   try {
-    console.log('Public news endpoint hit');
     const news = await News.find().sort({ createdAt: -1 });
     res.json(news);
   } catch (error) {
-    console.error('Error in /api/news endpoint:', error);
+    console.error('Error fetching news:', error);
     res.status(500).json({ message: 'Error fetching news' });
   }
 });
 
-app.get('/api/news/:id', checkDatabaseConnection, async (req, res) => {
+app.get('/api/news/:id([0-9a-fA-F]{24})', checkDatabaseConnection, async (req, res) => {
   try {
     const news = await News.findById(req.params.id);
     if (!news) {
@@ -255,7 +255,6 @@ app.get('/api/news/:id', checkDatabaseConnection, async (req, res) => {
 
 app.get('/api/league', checkDatabaseConnection, async (req, res) => {
   try {
-    console.log('Fetching league table...');
     const leagueTable = await League.find().sort({ position: 1 });
     res.json(leagueTable);
   } catch (error) {
@@ -264,8 +263,8 @@ app.get('/api/league', checkDatabaseConnection, async (req, res) => {
   }
 });
 
-// Auth routes
-app.post('/register', checkDatabaseConnection, async (req, res) => {
+// Auth routes with proper path parameters
+app.post('/api/register', checkDatabaseConnection, async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
@@ -310,7 +309,7 @@ app.post('/register', checkDatabaseConnection, async (req, res) => {
   }
 });
 
-app.post('/login', checkDatabaseConnection, async (req, res) => {
+app.post('/api/login', checkDatabaseConnection, async (req, res) => {
   try {
     const { email, password } = req.body;
 
