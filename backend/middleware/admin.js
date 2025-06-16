@@ -6,14 +6,7 @@ const admin = async (req, res, next) => {
       return res.status(401).json({ message: 'Authentication required' });
     }
 
-    // First check the role from the token
-    if (req.user.role === 'admin') {
-      return next();
-    }
-
-    // If not admin in token, check the database
     const user = await User.findById(req.user.id);
-
     if (!user) {
       return res.status(401).json({ message: 'User not found' });
     }
@@ -22,8 +15,12 @@ const admin = async (req, res, next) => {
       return res.status(403).json({ message: 'Access denied. Admin privileges required.' });
     }
 
-    // Update the user object with the database role
-    req.user.role = user.role;
+    // Update req.user with the latest user data
+    req.user = {
+      id: user._id,
+      role: user.role
+    };
+
     next();
   } catch (err) {
     console.error('Admin middleware error:', err);

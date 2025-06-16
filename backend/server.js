@@ -68,45 +68,46 @@ app.options('*', cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Create uploads directory if it doesn't exist
+const uploadsDir = path.join(__dirname, 'uploads');
+const playersDir = path.join(uploadsDir, 'players');
+const newsDir = path.join(uploadsDir, 'news');
+
+[uploadsDir, playersDir, newsDir].forEach(dir => {
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+});
+
 // Configure multer for file uploads
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, 'uploads/players')
+    const type = req.path.includes('news') ? 'news' : 'players';
+    cb(null, path.join(uploadsDir, type));
   },
   filename: function (req, file, cb) {
-    cb(null, Date.now() + '-' + file.originalname)
+    cb(null, Date.now() + '-' + file.originalname);
   }
 });
 
-const upload = multer({ 
-  storage: storage,
-  fileFilter: function (req, file, cb) {
-    const filetypes = /jpeg|jpg|png/;
-    const mimetype = filetypes.test(file.mimetype);
-    const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+const fileFilter = (req, file, cb) => {
+  const filetypes = /jpeg|jpg|png/;
+  const mimetype = filetypes.test(file.mimetype);
+  const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
 
-    if (mimetype && extname) {
-      return cb(null, true);
-    }
-    cb(new Error('Only .png, .jpg and .jpeg format allowed!'));
+  if (mimetype && extname) {
+    return cb(null, true);
   }
-});
+  cb(new Error('Only .png, .jpg and .jpeg format allowed!'));
+};
 
-// Create uploads directory if it doesn't exist
-if (!fs.existsSync('uploads')) {
-  fs.mkdirSync('uploads');
-}
-if (!fs.existsSync('uploads/players')) {
-  fs.mkdirSync('uploads/players');
-}
-if (!fs.existsSync('uploads/news')) {
-  fs.mkdirSync('uploads/news');
-}
+const upload = multer({ storage, fileFilter });
+const newsUpload = multer({ storage, fileFilter });
 
 // Serve static files from uploads directory
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-app.use('/uploads/players', express.static(path.join(__dirname, 'uploads/players')));
-app.use('/uploads/news', express.static(path.join(__dirname, 'uploads/news')));
+app.use('/uploads', express.static(uploadsDir));
+app.use('/uploads/players', express.static(playersDir));
+app.use('/uploads/news', express.static(newsDir));
 
 // MongoDB connection with improved settings
 console.log("Setting up MongoDB connection...");
@@ -203,11 +204,11 @@ app.use((req, res, next) => {
     next();
 });
 
-// Import admin routes
+// Import routes
 const adminRoutes = require('./routes/admin');
 
-// Mount admin routes with proper path
-app.use('/api/admin', adminRoutes);
+// Mount admin routes with proper path and middleware
+app.use('/api/admin', checkDatabaseConnection, adminRoutes);
 
 // Public routes with proper path parameters
 app.get('/api/players', checkDatabaseConnection, async (req, res) => {
@@ -240,9 +241,9 @@ app.get('/api/news', checkDatabaseConnection, async (req, res) => {
   }
 });
 
-app.get('/api/news/:id([0-9a-fA-F]{24})', checkDatabaseConnection, async (req, res) => {
+app.get(['/api/news/:articleId'], checkDatabaseConnection, async (req, res) => {
   try {
-    const news = await News.findById(req.params.id);
+    const news = await News.findById(req.params.articleId);
     if (!news) {
       return res.status(404).json({ message: 'News article not found' });
     }

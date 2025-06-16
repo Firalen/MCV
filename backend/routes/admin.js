@@ -12,8 +12,12 @@ const User = require('../models/User');
 const fs = require('fs');
 const League = require('../models/League');
 
+// Apply auth and admin middleware to all routes
+router.use(auth);
+router.use(admin);
+
 // Admin stats endpoint
-router.get('/stats', auth, admin, async (req, res) => {
+router.get('/stats', async (req, res) => {
   try {
     const [totalUsers, totalPlayers, totalFixtures, totalNews] = await Promise.all([
       User.countDocuments(),
@@ -91,7 +95,7 @@ const newsUpload = multer({
 });
 
 // Players routes
-router.get('/players', auth, admin, async (req, res) => {
+router.get('/players', async (req, res) => {
   try {
     const players = await Player.find().sort({ number: 1 });
     res.json(players);
@@ -101,7 +105,7 @@ router.get('/players', auth, admin, async (req, res) => {
   }
 });
 
-router.post('/players', auth, admin, upload.single('image'), async (req, res) => {
+router.post('/players', upload.single('image'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ message: 'Player image is required' });
@@ -140,9 +144,9 @@ router.post('/players', auth, admin, upload.single('image'), async (req, res) =>
   }
 });
 
-router.put('/players/:id([0-9a-fA-F]{24})', auth, admin, upload.single('image'), async (req, res) => {
+router.put(['/players/:playerId'], upload.single('image'), async (req, res) => {
   try {
-    const player = await Player.findById(req.params.id);
+    const player = await Player.findById(req.params.playerId);
     if (!player) {
       return res.status(404).json({ message: 'Player not found' });
     }
@@ -176,9 +180,9 @@ router.put('/players/:id([0-9a-fA-F]{24})', auth, admin, upload.single('image'),
   }
 });
 
-router.delete('/players/:id([0-9a-fA-F]{24})', auth, admin, async (req, res) => {
+router.delete(['/players/:playerId'], async (req, res) => {
   try {
-    const player = await Player.findById(req.params.id);
+    const player = await Player.findById(req.params.playerId);
     if (!player) {
       return res.status(404).json({ message: 'Player not found' });
     }
@@ -191,7 +195,7 @@ router.delete('/players/:id([0-9a-fA-F]{24})', auth, admin, async (req, res) => 
       }
     }
 
-    await Player.deleteOne({ _id: req.params.id });
+    await Player.deleteOne({ _id: req.params.playerId });
     res.json({ message: 'Player deleted successfully' });
   } catch (error) {
     console.error('Error deleting player:', error);
@@ -200,7 +204,7 @@ router.delete('/players/:id([0-9a-fA-F]{24})', auth, admin, async (req, res) => 
 });
 
 // Fixtures routes
-router.get('/fixtures', auth, admin, async (req, res) => {
+router.get('/fixtures', async (req, res) => {
   try {
     const fixtures = await Fixture.find().sort({ date: 1 });
     res.json(fixtures);
@@ -209,7 +213,7 @@ router.get('/fixtures', auth, admin, async (req, res) => {
   }
 });
 
-router.post('/fixtures', auth, admin, async (req, res) => {
+router.post('/fixtures', async (req, res) => {
   try {
     const { opponent, date, venue, status, competition, score } = req.body;
 
@@ -236,7 +240,7 @@ router.post('/fixtures', auth, admin, async (req, res) => {
   }
 });
 
-router.put('/fixtures/:id([0-9a-fA-F]{24})', auth, admin, async (req, res) => {
+router.put(['/fixtures/:fixtureId'], async (req, res) => {
   try {
     const { opponent, date, venue, status, competition, score } = req.body;
 
@@ -245,7 +249,7 @@ router.put('/fixtures/:id([0-9a-fA-F]{24})', auth, admin, async (req, res) => {
       return res.status(400).json({ message: 'All fields are required' });
     }
 
-    const fixture = await Fixture.findById(req.params.id);
+    const fixture = await Fixture.findById(req.params.fixtureId);
     if (!fixture) {
       return res.status(404).json({ message: 'Fixture not found' });
     }
@@ -265,9 +269,9 @@ router.put('/fixtures/:id([0-9a-fA-F]{24})', auth, admin, async (req, res) => {
   }
 });
 
-router.delete('/fixtures/:id([0-9a-fA-F]{24})', auth, admin, async (req, res) => {
+router.delete(['/fixtures/:fixtureId'], async (req, res) => {
   try {
-    const fixture = await Fixture.findById(req.params.id);
+    const fixture = await Fixture.findById(req.params.fixtureId);
     if (!fixture) {
       return res.status(404).json({ message: 'Fixture not found' });
     }
@@ -281,7 +285,7 @@ router.delete('/fixtures/:id([0-9a-fA-F]{24})', auth, admin, async (req, res) =>
 });
 
 // Store routes
-router.get('/store', auth, admin, async (req, res) => {
+router.get('/store', async (req, res) => {
   try {
     const items = await StoreItem.find().sort({ name: 1 });
     res.json(items);
@@ -290,7 +294,7 @@ router.get('/store', auth, admin, async (req, res) => {
   }
 });
 
-router.post('/store', auth, admin, async (req, res) => {
+router.post('/store', async (req, res) => {
   const item = new StoreItem({
     name: req.body.name,
     price: req.body.price,
@@ -310,9 +314,9 @@ router.post('/store', auth, admin, async (req, res) => {
   }
 });
 
-router.put('/store/:id([0-9a-fA-F]{24})', auth, admin, async (req, res) => {
+router.put(['/store/:itemId'], async (req, res) => {
   try {
-    const item = await StoreItem.findById(req.params.id);
+    const item = await StoreItem.findById(req.params.itemId);
     if (!item) return res.status(404).json({ message: 'Item not found' });
 
     Object.assign(item, req.body);
@@ -323,12 +327,12 @@ router.put('/store/:id([0-9a-fA-F]{24})', auth, admin, async (req, res) => {
   }
 });
 
-router.delete('/store/:id([0-9a-fA-F]{24})', auth, admin, async (req, res) => {
+router.delete(['/store/:itemId'], async (req, res) => {
   try {
-    const item = await StoreItem.findById(req.params.id);
+    const item = await StoreItem.findById(req.params.itemId);
     if (!item) return res.status(404).json({ message: 'Item not found' });
 
-    await StoreItem.deleteOne({ _id: req.params.id });
+    await StoreItem.deleteOne({ _id: req.params.itemId });
     res.json({ message: 'Item deleted' });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -336,7 +340,7 @@ router.delete('/store/:id([0-9a-fA-F]{24})', auth, admin, async (req, res) => {
 });
 
 // News routes
-router.get('/news', auth, admin, async (req, res) => {
+router.get('/news', async (req, res) => {
   try {
     const news = await News.find().sort({ date: -1 });
     res.json(news);
@@ -345,7 +349,7 @@ router.get('/news', auth, admin, async (req, res) => {
   }
 });
 
-router.post('/news', auth, admin, newsUpload.single('image'), async (req, res) => {
+router.post('/news', newsUpload.single('image'), async (req, res) => {
   try {
     const { title, content, category } = req.body;
 
@@ -368,10 +372,10 @@ router.post('/news', auth, admin, newsUpload.single('image'), async (req, res) =
   }
 });
 
-router.put('/news/:id([0-9a-fA-F]{24})', auth, admin, newsUpload.single('image'), async (req, res) => {
+router.put(['/news/:newsId'], newsUpload.single('image'), async (req, res) => {
   try {
     const { title, content, category } = req.body;
-    const news = await News.findById(req.params.id);
+    const news = await News.findById(req.params.newsId);
 
     if (!news) {
       return res.status(404).json({ message: 'News not found' });
@@ -402,9 +406,9 @@ router.put('/news/:id([0-9a-fA-F]{24})', auth, admin, newsUpload.single('image')
   }
 });
 
-router.delete('/news/:id([0-9a-fA-F]{24})', auth, admin, async (req, res) => {
+router.delete(['/news/:newsId'], async (req, res) => {
   try {
-    const news = await News.findById(req.params.id);
+    const news = await News.findById(req.params.newsId);
     if (!news) {
       return res.status(404).json({ message: 'News not found' });
     }
@@ -417,7 +421,7 @@ router.delete('/news/:id([0-9a-fA-F]{24})', auth, admin, async (req, res) => {
       }
     }
 
-    await News.deleteOne({ _id: req.params.id });
+    await News.deleteOne({ _id: req.params.newsId });
     res.json({ message: 'News deleted successfully' });
   } catch (error) {
     console.error('Error deleting news:', error);
@@ -426,7 +430,7 @@ router.delete('/news/:id([0-9a-fA-F]{24})', auth, admin, async (req, res) => {
 });
 
 // Add users route for admin dashboard
-router.get('/users', auth, admin, async (req, res) => {
+router.get('/users', async (req, res) => {
   try {
     const users = await User.find().select('-password');
     res.json(users);
@@ -436,7 +440,7 @@ router.get('/users', auth, admin, async (req, res) => {
 });
 
 // League Table Routes
-router.get('/league', auth, admin, async (req, res) => {
+router.get('/league', async (req, res) => {
   try {
     const leagueTable = await League.find().sort({ position: 1 });
     res.json(leagueTable);
@@ -446,7 +450,7 @@ router.get('/league', auth, admin, async (req, res) => {
   }
 });
 
-router.post('/league', auth, admin, async (req, res) => {
+router.post('/league', async (req, res) => {
   try {
     const { teamName, played, wins, losses, points, position } = req.body;
     
@@ -471,7 +475,7 @@ router.post('/league', auth, admin, async (req, res) => {
   }
 });
 
-router.put('/league/:id([0-9a-fA-F]{24})', auth, admin, async (req, res) => {
+router.put(['/league/:leagueId'], async (req, res) => {
   try {
     const { teamName, played, wins, losses, points, position } = req.body;
     
@@ -480,7 +484,7 @@ router.put('/league/:id([0-9a-fA-F]{24})', auth, admin, async (req, res) => {
     }
 
     const leagueEntry = await League.findByIdAndUpdate(
-      req.params.id,
+      req.params.leagueId,
       {
         teamName,
         played: played || 0,
@@ -503,9 +507,9 @@ router.put('/league/:id([0-9a-fA-F]{24})', auth, admin, async (req, res) => {
   }
 });
 
-router.delete('/league/:id([0-9a-fA-F]{24})', auth, admin, async (req, res) => {
+router.delete(['/league/:leagueId'], async (req, res) => {
   try {
-    const leagueEntry = await League.findByIdAndDelete(req.params.id);
+    const leagueEntry = await League.findByIdAndDelete(req.params.leagueId);
     
     if (!leagueEntry) {
       return res.status(404).json({ message: 'League entry not found' });
