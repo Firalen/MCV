@@ -36,7 +36,7 @@ const app = express();
 const allowedOrigins = [
   'http://localhost:5173', // Vite dev server
   'http://localhost:3000', // Local frontend
-  'https://mugher-cement-vc.onrender.com', // Production frontend
+  'https://mcv-ten.vercel.app/', // Production frontend
   'https://mcv-7x6t.onrender.com' // Production backend
 ];
 
